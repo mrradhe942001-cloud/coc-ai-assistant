@@ -1,54 +1,60 @@
 const MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
 
 const SYSTEM = `You are CoC Battle AI, a Clash of Clans strategy assistant.
+Support TH1 through TH18.
 
-Support Town Hall 1 through Town Hall 18 for attack and farming advice.
+Rules:
+- Reply in simple Hinglish.
+- Use only troops, spells, heroes, pets and siege machines available at the selected Town Hall.
+- Never invent units, buildings, mechanics or copy-base links.
+- Never promise a guaranteed 3-star or 100% result.
+- For screenshots, analyze only clearly visible information. Hidden traps are unknown.
+- Prefer a practical, high-confidence plan and mention uncertainty when something is unclear.
 
-IMPORTANT RULES:
-- Use only troops, spells, heroes, pets, siege machines and hero equipment actually available at the user's Town Hall.
-- Never invent troops, spells, buildings, heroes or game mechanics.
-- If you are uncertain about a game fact, say so instead of inventing it.
-- Ask for Town Hall level when it is needed and not provided.
-- Reply in simple Hinglish unless the user asks for another language.
+For WAR screenshot analysis always use these sections:
 
-ATTACK STRATEGY:
-Give:
-1. Recommended army with troop quantities.
-2. Spells with quantities.
-3. Heroes and pets when available.
-4. Siege machine and Clan Castle recommendation when relevant.
-5. Entry point using clock positions such as 12, 3, 6 or 9 o'clock.
-6. Funnel instructions.
-7. Exact deployment order.
-8. Main army path through the base.
-9. Spell placement and approximate timing.
-10. Hero ability timing.
-11. Important defense targets.
-12. Backup plan if the main path changes.
+## BASE READ
+Describe visible Town Hall position, compartments, important defenses and likely pathing.
 
-FARMING:
-Prioritize good loot, training efficiency and practical armies.
-Explain which resources the strategy is useful for and how to deploy it.
+## ARMY
+Each troop MUST be on its own line:
+[UNIT] Name | Quantity | Purpose
 
-SCREENSHOT ANALYSIS:
-When a Clash of Clans base screenshot is supplied, inspect the visible layout.
-Do not pretend to see a building if it is unclear.
-Identify the likely Town Hall when possible.
-Analyze important visible defenses and base compartments.
-The selected goal will be WAR or FARMING.
-Recommend an army appropriate for the player's Town Hall.
-Describe deployment positions using a clock-face system.
-Explain troop path like:
-ENTRY -> FUNNEL -> MAIN ARMY -> CORE -> TOWN HALL / KEY TARGET.
-Explain what to deploy, where to deploy it, and when.
-Mention spell and hero ability timing.
-If the screenshot is unclear, explicitly tell the user what cannot be identified.
+## SPELLS
+Each spell MUST be:
+[SPELL] Name | Quantity | Purpose
 
-WAR BASE DESIGNS:
-War base design support is for TH4 through TH18.
-Explain anti-2-star, anti-3-star or other requested layout concepts.
-Never invent a Clash of Clans copy-layout URL.
-Only display a copy link when a real verified link has been stored in the application.`;
+## HEROES
+Each hero MUST be:
+[HERO] Name | Timing / role
+
+## SIEGE & CLAN CASTLE
+Give recommendations when relevant.
+
+## ATTACK MAP
+ENTRY: clock position
+FUNNEL-A: clock position
+FUNNEL-B: clock position
+MAIN: clock position
+PATH: Entry -> Funnel -> Main Army -> Core -> Town Hall / key target
+SPELL-ZONES: clock positions and target areas
+
+## DEPLOYMENT
+Give numbered deployment steps in exact order.
+
+## TIMING
+Explain spell timing and hero ability timing.
+
+## BACKUP
+Explain what to change if pathing goes wrong.
+
+## PRACTICE
+Give three rehearsal checkpoints: funnel, main deployment, and spell/hero timing.
+Tell the player what to verify before the real war attack.
+
+For FARMING prioritize loot and practical training.
+For WAR BASE DESIGN support TH4-TH18 and explain anti-2-star/anti-3-star concepts.
+Never invent a Clash of Clans layout URL.`;
 
 export default {
   async fetch(request, env) {
@@ -57,52 +63,72 @@ export default {
     if (request.method === "POST" && url.pathname === "/api/ask") {
       try {
         if (!env.AI) {
-          return json({ error: "Workers AI binding 'AI' nahi mila." }, 500);
+          return json({
+            error: "Workers AI binding 'AI' nahi mila."
+          }, 500);
         }
 
         const body = await request.json();
+
         const message = String(body.message || "").trim();
         const mode = String(body.mode || "attack");
         const th = String(body.th || "");
         const image = body.image || null;
 
         if (!message && !image) {
-          return json({ error: "Message ya screenshot bhejo." }, 400);
+          return json({
+            error: "Question ya screenshot bhejo."
+          }, 400);
         }
 
-        let userPrompt =
-          "Selected mode: " + mode +
-          "\\nPlayer Town Hall: " + (th || "not provided") +
-          "\\nUser message: " +
-          (message || "Analyze the uploaded base screenshot.");
+        let prompt =
+          "Mode: " + mode +
+          "\nPlayer Town Hall: " + (th || "not provided") +
+          "\nRequest: " +
+          (message || "Analyze this Clash of Clans base screenshot.");
 
         if (image) {
-          userPrompt +=
-            "\\nA Clash of Clans base screenshot is attached." +
-            "\\nAnalyze only what is actually visible." +
-            "\\nUse clock positions for deployment." +
-            "\\nExplain troop path, deployment order, spells and hero timing.";
+          prompt +=
+            "\nA base screenshot is attached." +
+            "\nInspect the actual image carefully." +
+            "\nUse clock positions." +
+            "\nGive a legal army for the selected TH." +
+            "\nDo not claim hidden traps are visible." +
+            "\nUse the structured WAR screenshot format when mode is war.";
         }
 
         const input = {
           messages: [
-            { role: "system", content: SYSTEM },
-            { role: "user", content: userPrompt }
+            {
+              role: "system",
+              content: SYSTEM
+            },
+            {
+              role: "user",
+              content: prompt
+            }
           ],
-          max_tokens: 1400,
-          temperature: 0.2
+          max_tokens: 1800,
+          temperature: 0.15
         };
 
         if (image) {
-  const base64 = image.split(",")[1];
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
+          const base64 = image.split(",")[1];
 
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
+          if (!base64) {
+            return json({
+              error: "Screenshot data invalid hai."
+            }, 400);
+          }
 
-  input.image = [...bytes];
+          const binary = atob(base64);
+          const bytes = new Uint8Array(binary.length);
+
+          for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+          }
+
+          input.image = [...bytes];
         }
 
         const result = await env.AI.run(MODEL, input);
@@ -111,18 +137,20 @@ export default {
           reply:
             result?.response ||
             result?.result ||
-            "AI se response nahi mila."
+            "AI response nahi mila."
         });
-      } catch (error) {
-        return json(
-          { error: error?.message || "Unknown error" },
-          500
-        );
+
+      } catch (e) {
+        return json({
+          error: e?.message || "Unknown error"
+        }, 500);
       }
     }
 
     return new Response(PAGE, {
-      headers: { "content-type": "text/html; charset=UTF-8" }
+      headers: {
+        "content-type": "text/html; charset=UTF-8"
+      }
     });
   }
 };
@@ -130,361 +158,1228 @@ export default {
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "content-type": "application/json; charset=UTF-8" }
+    headers: {
+      "content-type": "application/json; charset=UTF-8"
+    }
   });
 }
 
 const PAGE = `<!doctype html>
 <html>
 <head>
+
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<meta
+  name="viewport"
+  content="width=device-width,initial-scale=1"
+>
+
 <title>CoC Battle AI</title>
 
 <style>
-*{box-sizing:border-box}
-body{margin:0;font-family:Arial,sans-serif;background:#080b12;color:#fff}
-.app{max-width:760px;margin:auto;padding:18px}
-.hero{background:linear-gradient(135deg,#182235,#101725);border:1px solid #2b3a55;border-radius:22px;padding:22px;margin-bottom:16px}
-.hero h1{margin:0 0 7px;font-size:28px}
-.hero p{margin:0;color:#aebbd0;line-height:1.5}
-.badge{display:inline-block;background:#ffc928;color:#111;font-weight:bold;padding:6px 10px;border-radius:20px;font-size:12px;margin-bottom:12px}
-.card{background:#111722;border:1px solid #273247;border-radius:18px;padding:15px;margin-bottom:14px}
-.title{font-weight:bold;font-size:16px;margin-bottom:12px}
-.modes{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.mode{border:1px solid #35445f;background:#182132;color:#fff;border-radius:13px;padding:12px 7px;font-weight:bold;cursor:pointer}
-.mode.active{background:#ffc928;color:#111;border-color:#ffc928}
-select,textarea{width:100%;background:#090d15;border:1px solid #35445f;color:white;border-radius:12px;padding:13px;font-size:15px}
-textarea{min-height:105px;resize:vertical;margin-top:10px}
-.upload{display:block;border:2px dashed #42516d;border-radius:15px;padding:18px;text-align:center;cursor:pointer;margin-top:10px;background:#0c111b}
-.upload strong{display:block;margin-bottom:5px}
-.upload small{color:#9cabc2}
-#file{display:none}
-#preview{display:none;width:100%;max-height:350px;object-fit:contain;margin-top:12px;border-radius:13px;border:1px solid #34415a}
-.imageActions{display:none;margin-top:8px}
-.remove{background:#38191c;color:#ffb5b5;border:1px solid #6b292f;padding:8px 12px;border-radius:9px}
-.send{width:100%;border:0;background:#ffc928;color:#111;padding:15px;font-size:16px;font-weight:bold;border-radius:13px;cursor:pointer;margin-top:12px}
-.send:disabled{opacity:.55}
-.answer{display:none;white-space:pre-wrap;line-height:1.65;background:#101826;border:1px solid #2c3b56;border-radius:17px;padding:17px;margin-top:14px}
-.status{color:#aebbd0;font-size:14px;margin-top:10px}
-.path{margin-top:10px;padding:11px;background:#0b1019;border-radius:11px;color:#ffc928;font-size:13px}
-.note{font-size:13px;color:#9daac0;line-height:1.5;margin-top:10px}
-footer{text-align:center;color:#68758a;font-size:12px;padding:15px}
-@media(max-width:480px){.hero h1{font-size:24px}}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #080b12;
+  color: #fff;
+  font-family: Arial, sans-serif;
+}
+
+.app {
+  max-width: 780px;
+  margin: auto;
+  padding: 16px;
+}
+
+.hero,
+.card,
+.answer,
+.loadout,
+.practice {
+  background: #111722;
+  border: 1px solid #273247;
+  border-radius: 18px;
+  padding: 16px;
+  margin-bottom: 13px;
+}
+
+.hero {
+  background: linear-gradient(
+    135deg,
+    #182235,
+    #101725
+  );
+
+  border-radius: 22px;
+  padding: 21px;
+}
+
+.badge {
+  display: inline-block;
+  background: #ffc928;
+  color: #111;
+  font-weight: 800;
+  padding: 6px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+h1 {
+  margin: 0 0 7px;
+  font-size: 27px;
+}
+
+.hero p {
+  margin: 0;
+  color: #aebbd0;
+  line-height: 1.5;
+}
+
+.title {
+  font-weight: 800;
+  margin-bottom: 11px;
+}
+
+.modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.mode {
+  border: 1px solid #35445f;
+  background: #182132;
+  color: #fff;
+  border-radius: 12px;
+  padding: 12px 6px;
+  font-weight: 700;
+}
+
+.mode.active {
+  background: #ffc928;
+  color: #111;
+  border-color: #ffc928;
+}
+
+select,
+textarea {
+  width: 100%;
+  background: #090d15;
+  border: 1px solid #35445f;
+  color: #fff;
+  border-radius: 12px;
+  padding: 13px;
+  font-size: 15px;
+}
+
+textarea {
+  min-height: 100px;
+  resize: vertical;
+  margin-top: 8px;
+}
+
+.upload {
+  display: block;
+  border: 2px dashed #42516d;
+  border-radius: 15px;
+  padding: 17px;
+  text-align: center;
+  background: #0c111b;
+  cursor: pointer;
+}
+
+.upload strong {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.upload small,
+.note {
+  color: #9cabc2;
+  font-size: 13px;
+}
+
+#file {
+  display: none;
+}
+
+#preview {
+  display: none;
+  width: 100%;
+  max-height: 360px;
+  object-fit: contain;
+  margin-top: 12px;
+  border-radius: 13px;
+  border: 1px solid #34415a;
+}
+
+#imageActions {
+  display: none;
+  margin-top: 8px;
+}
+
+.remove {
+  background: #38191c;
+  color: #ffb5b5;
+  border: 1px solid #6b292f;
+  padding: 8px 12px;
+  border-radius: 9px;
+}
+
+.path {
+  margin-top: 10px;
+  padding: 11px;
+  background: #0b1019;
+  border-radius: 11px;
+  color: #ffc928;
+  font-size: 13px;
+}
+
+.send {
+  width: 100%;
+  border: 0;
+  background: #ffc928;
+  color: #111;
+  padding: 15px;
+  font-size: 16px;
+  font-weight: 800;
+  border-radius: 13px;
+  margin-top: 11px;
+}
+
+.send:disabled {
+  opacity: .55;
+}
+
+.status {
+  color: #aebbd0;
+  font-size: 14px;
+  margin-top: 9px;
+}
+
+.answer {
+  display: none;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  background: #101826;
+}
+
+.loadout {
+  display: none;
+}
+
+.iconGrid {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 9px;
+}
+
+.unit {
+  background: #0b1019;
+  border: 1px solid #2b3850;
+  border-radius: 13px;
+  padding: 10px;
+  text-align: center;
+}
+
+.unitIcon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #202b3e;
+  font-size: 25px;
+}
+
+.unit b {
+  display: block;
+  font-size: 12px;
+}
+
+.unit span {
+  font-size: 11px;
+  color: #aebbd0;
+}
+
+.practice {
+  display: none;
+  border-color: #ffc928;
+  background: #101826;
+}
+
+.practice h3 {
+  margin-top: 0;
+}
+
+.step {
+  background: #0b1019;
+  border-radius: 11px;
+  padding: 10px;
+  margin: 7px 0;
+}
+
+.warn {
+  font-size: 12px;
+  color: #aebbd0;
+  line-height: 1.45;
+  margin-top: 10px;
+}
+
+footer {
+  text-align: center;
+  color: #68758a;
+  font-size: 12px;
+  padding: 15px;
+}
+
+@media(max-width:480px) {
+
+  .iconGrid {
+    grid-template-columns: repeat(2,1fr);
+  }
+
+  h1 {
+    font-size: 24px;
+  }
+
+}
+
 </style>
+
 </head>
 
 <body>
+
 <div class="app">
 
 <div class="hero">
-<div class="badge">AI STRATEGY ASSISTANT</div>
-<h1>⚔️ CoC Battle AI</h1>
-<p>TH1–TH18 attack & farming strategy, screenshot analysis, deployment path and TH4–TH18 war-base planning.</p>
+
+<div class="badge">
+AI STRATEGY + PRACTICE
 </div>
 
+<h1>
+⚔️ CoC Battle AI
+</h1>
+
+<p>
+TH1–TH18 strategy, screenshot vision,
+loadout cards, attack path aur practice rehearsal.
+</p>
+
+</div>
+
+
 <div class="card">
-<div class="title">1️⃣ Town Hall Select Karo</div>
+
+<div class="title">
+1️⃣ Town Hall Select Karo
+</div>
+
 <select id="th">
-<option value="">Town Hall select karo</option>
-<option>TH1</option><option>TH2</option><option>TH3</option>
-<option>TH4</option><option>TH5</option><option>TH6</option>
-<option>TH7</option><option>TH8</option><option>TH9</option>
-<option>TH10</option><option>TH11</option><option>TH12</option>
-<option>TH13</option><option>TH14</option><option>TH15</option>
-<option>TH16</option><option>TH17</option><option>TH18</option>
+
+<option value="">
+Town Hall select karo
+</option>
+
+<option>TH1</option>
+<option>TH2</option>
+<option>TH3</option>
+<option>TH4</option>
+<option>TH5</option>
+<option>TH6</option>
+<option>TH7</option>
+<option>TH8</option>
+<option>TH9</option>
+<option>TH10</option>
+<option>TH11</option>
+<option>TH12</option>
+<option>TH13</option>
+<option>TH14</option>
+<option>TH15</option>
+<option>TH16</option>
+<option>TH17</option>
+<option>TH18</option>
+
 </select>
+
 </div>
+
 
 <div class="card">
-<div class="title">2️⃣ Aapko Kya Chahiye?</div>
+
+<div class="title">
+2️⃣ Mode
+</div>
+
 <div class="modes">
-<button class="mode active" data-mode="attack">⚔️ Attack</button>
-<button class="mode" data-mode="farming">💰 Farming</button>
-<button class="mode" data-mode="war">🏆 War Screenshot</button>
-<button class="mode" data-mode="base">🏰 War Base Design</button>
-</div>
+
+<button
+  class="mode active"
+  data-mode="attack"
+>
+⚔️ Attack
+</button>
+
+<button
+  class="mode"
+  data-mode="farming"
+>
+💰 Farming
+</button>
+
+<button
+  class="mode"
+  data-mode="war"
+>
+🏆 War Screenshot
+</button>
+
+<button
+  class="mode"
+  data-mode="base"
+>
+🏰 War Base Design
+</button>
+
 </div>
 
-<div class="card" id="baseSection" style="display:none">
-<div class="title">🏰 TH4–TH18 War Base Designs</div>
+</div>
+
+
+<div
+  class="card"
+  id="baseSection"
+  style="display:none"
+>
+
+<div class="title">
+🏰 TH4–TH18 War Base
+</div>
+
 <div class="modes">
-<button class="mode baseType" data-type="Anti 3 Star">🛡️ Anti 3-Star</button>
-<button class="mode baseType" data-type="Anti 2 Star">⭐ Anti 2-Star</button>
-</div>
-<div class="note">
-Real in-game Copy Base link sirf verified Clash of Clans layout link available hone par dikhaya jayega.
-</div>
+
+<button
+  class="mode baseType"
+  data-type="Anti 3 Star"
+>
+🛡️ Anti 3-Star
+</button>
+
+<button
+  class="mode baseType"
+  data-type="Anti 2 Star"
+>
+⭐ Anti 2-Star
+</button>
+
 </div>
 
-<div class="card" id="screenSection">
-<div class="title">3️⃣ Base Screenshot (Optional)</div>
+<p class="note">
+Real Copy Base link sirf verified layout URL
+available hone par use hoga.
+</p>
 
-<label class="upload" for="file">
-<strong>📷 Screenshot Upload Karo</strong>
-<small>Maximum 20 MB • large image automatically optimize hogi</small>
+</div>
+
+
+<div
+  class="card"
+  id="screenSection"
+>
+
+<div class="title">
+3️⃣ Base Screenshot
+</div>
+
+<label
+  class="upload"
+  for="file"
+>
+
+<strong>
+📷 Screenshot Upload Karo
+</strong>
+
+<small>
+Maximum 20 MB • automatic compression
+</small>
+
 </label>
 
-<input id="file" type="file" accept="image/png,image/jpeg,image/webp">
+<input
+  id="file"
+  type="file"
+  accept="image/png,image/jpeg,image/webp"
+>
 
 <img id="preview">
 
-<div class="imageActions" id="imageActions">
-<button class="remove" id="removeImage">✕ Screenshot Remove</button>
+<div id="imageActions">
+
+<button
+  class="remove"
+  id="removeImage"
+>
+✕ Screenshot Remove
+</button>
+
 </div>
 
 <div class="path">
-📍 Analysis: Entry → Funnel → Main Army → Core → Main Target
+📍 Entry → Funnel → Main Army → Core → Main Target
 </div>
+
 </div>
+
 
 <div class="card">
-<div class="title">4️⃣ Apna Question Likho</div>
 
-<textarea id="message"
-placeholder="Example: Is TH12 base ko 3 star karne ke liye army aur deployment path batao..."></textarea>
-
-<button class="send" id="send">⚔️ Strategy Banao</button>
-<div class="status" id="status"></div>
+<div class="title">
+4️⃣ Question / Extra Details
 </div>
 
-<div class="answer" id="answer"></div>
+<textarea
+  id="message"
+  placeholder="War plan batao. Hero/equipment/troop levels pata ho to yahan likho for better accuracy."
+></textarea>
+
+<button
+  class="send"
+  id="send"
+>
+⚔️ Strategy + Practice Plan
+</button>
+
+<div
+  class="status"
+  id="status"
+></div>
+
+</div>
+
+
+<div
+  class="loadout"
+  id="loadout"
+>
+
+<div class="title">
+🪖 Recommended Loadout
+</div>
+
+<div
+  class="iconGrid"
+  id="iconGrid"
+></div>
+
+<div class="warn">
+Abhi fast symbolic troop/spell/hero icons use hote hain.
+Real troop artwork ko baad me image assets ke saath map kiya ja sakta hai.
+</div>
+
+</div>
+
+
+<div
+  class="practice"
+  id="practice"
+>
+
+<h3>
+🎯 Practice Mode
+</h3>
+
+<div class="step">
+① <b>Funnel rehearsal:</b>
+AI ke clock positions dekhkar deployment order repeat karo.
+</div>
+
+<div class="step">
+② <b>Main push:</b>
+Entry → Funnel → Main Army → Core path ko rehearse karo.
+</div>
+
+<div class="step">
+③ <b>Timing:</b>
+Strategy ke TIMING section se spells aur hero abilities practice karo.
+</div>
+
+<div class="warn">
+Screenshot se exact playable base game ke andar automatically recreate nahi hota.
+Hidden traps, levels aur live pathing ki wajah se 100% result guarantee nahi hoti.
+</div>
+
+</div>
+
+
+<div
+  class="answer"
+  id="answer"
+></div>
+
 
 <footer>
-Strategy assistant only — Clash of Clans ko automatically control nahi karta.
+Strategy/practice assistant — game ko automatically control nahi karta.
 </footer>
 
 </div>
 
+
 <script>
+
 let selectedMode = "attack";
 let selectedImage = null;
 let baseType = "";
 
-const modeButtons = document.querySelectorAll(".mode[data-mode]");
-const baseSection = document.getElementById("baseSection");
-const screenSection = document.getElementById("screenSection");
-const fileInput = document.getElementById("file");
-const preview = document.getElementById("preview");
-const imageActions = document.getElementById("imageActions");
-const statusBox = document.getElementById("status");
-const answer = document.getElementById("answer");
-const send = document.getElementById("send");
+const fileInput =
+  document.getElementById("file");
 
-modeButtons.forEach(function(btn){
-  btn.addEventListener("click",function(){
-    modeButtons.forEach(function(b){b.classList.remove("active")});
-    btn.classList.add("active");
-    selectedMode = btn.dataset.mode;
+const preview =
+  document.getElementById("preview");
 
-    if(selectedMode === "base"){
-      baseSection.style.display = "block";
-      screenSection.style.display = "none";
-    }else{
-      baseSection.style.display = "none";
-      screenSection.style.display = "block";
+const imageActions =
+  document.getElementById("imageActions");
+
+const statusBox =
+  document.getElementById("status");
+
+const answer =
+  document.getElementById("answer");
+
+const send =
+  document.getElementById("send");
+
+const loadout =
+  document.getElementById("loadout");
+
+const iconGrid =
+  document.getElementById("iconGrid");
+
+const practice =
+  document.getElementById("practice");
+
+
+document
+.querySelectorAll(".mode[data-mode]")
+.forEach(function(btn) {
+
+  btn.addEventListener(
+    "click",
+    function() {
+
+      document
+      .querySelectorAll(".mode[data-mode]")
+      .forEach(function(b) {
+        b.classList.remove("active");
+      });
+
+      btn.classList.add("active");
+
+      selectedMode =
+        btn.dataset.mode;
+
+      document
+      .getElementById("baseSection")
+      .style.display =
+        selectedMode === "base"
+        ? "block"
+        : "none";
+
+      document
+      .getElementById("screenSection")
+      .style.display =
+        selectedMode === "base"
+        ? "none"
+        : "block";
+
     }
-  });
+  );
+
 });
 
-document.querySelectorAll(".baseType").forEach(function(btn){
-  btn.addEventListener("click",function(){
-    document.querySelectorAll(".baseType").forEach(function(b){
-      b.classList.remove("active");
-    });
-    btn.classList.add("active");
-    baseType = btn.dataset.type;
-  });
+
+document
+.querySelectorAll(".baseType")
+.forEach(function(btn) {
+
+  btn.addEventListener(
+    "click",
+    function() {
+
+      document
+      .querySelectorAll(".baseType")
+      .forEach(function(b) {
+        b.classList.remove("active");
+      });
+
+      btn.classList.add("active");
+
+      baseType =
+        btn.dataset.type;
+
+    }
+  );
+
 });
 
-/* 20 MB upload + automatic image optimization */
-fileInput.addEventListener("change", async function(){
-  const file = fileInput.files[0];
-  if(!file) return;
 
-  const MAX_UPLOAD = 20 * 1024 * 1024;
+fileInput.addEventListener(
+  "change",
+  async function() {
 
-  if(file.size > MAX_UPLOAD){
-    alert("Screenshot maximum 20 MB ka ho sakta hai.");
-    fileInput.value = "";
-    return;
+    const file =
+      fileInput.files[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (
+      file.size >
+      20 * 1024 * 1024
+    ) {
+
+      alert(
+        "Screenshot maximum 20 MB ka ho sakta hai."
+      );
+
+      fileInput.value = "";
+
+      return;
+    }
+
+    statusBox.textContent =
+      "🖼️ Screenshot optimize ho raha hai...";
+
+    try {
+
+      selectedImage =
+        await optimizeImage(file);
+
+      preview.src =
+        selectedImage;
+
+      preview.style.display =
+        "block";
+
+      imageActions.style.display =
+        "block";
+
+      statusBox.textContent =
+        "✅ Screenshot ready";
+
+    } catch (e) {
+
+      selectedImage = null;
+
+      fileInput.value = "";
+
+      statusBox.textContent = "";
+
+      alert(
+        "Screenshot process nahi ho paya."
+      );
+
+    }
+
   }
+);
 
-  statusBox.textContent = "🖼️ Screenshot optimize ho raha hai...";
 
-  try{
-    selectedImage = await optimizeImage(file);
+function optimizeImage(file) {
 
-    preview.src = selectedImage;
-    preview.style.display = "block";
-    imageActions.style.display = "block";
+  return new Promise(
+    function(resolve, reject) {
 
-    statusBox.textContent = "✅ Screenshot ready";
-  }catch(err){
-    selectedImage = null;
-    fileInput.value = "";
-    statusBox.textContent = "";
-    alert("Screenshot process nahi ho paya. Dusri image try karo.");
-  }
-});
+      const reader =
+        new FileReader();
 
-function optimizeImage(file){
-  return new Promise(function(resolve,reject){
-    const reader = new FileReader();
+      reader.onerror =
+        reject;
 
-    reader.onerror = reject;
+      reader.onload =
+        function(e) {
 
-    reader.onload = function(e){
-      const img = new Image();
+          const img =
+            new Image();
 
-      img.onerror = reject;
+          img.onerror =
+            reject;
 
-      img.onload = function(){
-        const MAX_SIDE = 1600;
+          img.onload =
+            function() {
 
-        let width = img.width;
-        let height = img.height;
+              const MAX = 1600;
 
-        if(width > MAX_SIDE || height > MAX_SIDE){
-          const scale = Math.min(
-            MAX_SIDE / width,
-            MAX_SIDE / height
-          );
+              let w = img.width;
+              let h = img.height;
 
-          width = Math.round(width * scale);
-          height = Math.round(height * scale);
-        }
+              if (
+                w > MAX ||
+                h > MAX
+              ) {
 
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
+                const scale =
+                  Math.min(
+                    MAX / w,
+                    MAX / h
+                  );
 
-        const ctx = canvas.getContext("2d");
+                w =
+                  Math.round(
+                    w * scale
+                  );
 
-        ctx.drawImage(
-          img,
-          0,
-          0,
-          width,
-          height
-        );
+                h =
+                  Math.round(
+                    h * scale
+                  );
 
-        /* JPEG 88% keeps base details readable while reducing size */
-        const optimized = canvas.toDataURL(
-          "image/jpeg",
-          0.88
-        );
+              }
 
-        resolve(optimized);
-      };
+              const canvas =
+                document.createElement(
+                  "canvas"
+                );
 
-      img.src = e.target.result;
-    };
+              canvas.width = w;
+              canvas.height = h;
 
-    reader.readAsDataURL(file);
-  });
+              const ctx =
+                canvas.getContext(
+                  "2d"
+                );
+
+              ctx.drawImage(
+                img,
+                0,
+                0,
+                w,
+                h
+              );
+
+              const optimized =
+                canvas.toDataURL(
+                  "image/jpeg",
+                  0.88
+                );
+
+              resolve(
+                optimized
+              );
+
+            };
+
+          img.src =
+            e.target.result;
+
+        };
+
+      reader.readAsDataURL(
+        file
+      );
+
+    }
+  );
+
 }
 
-document.getElementById("removeImage").addEventListener("click",function(e){
-  e.preventDefault();
 
-  selectedImage = null;
-  fileInput.value = "";
-  preview.src = "";
-  preview.style.display = "none";
-  imageActions.style.display = "none";
-  statusBox.textContent = "";
-});
+document
+.getElementById("removeImage")
+.addEventListener(
+  "click",
+  function(e) {
 
-send.addEventListener("click",async function(){
+    e.preventDefault();
 
-  const th = document.getElementById("th").value;
-  let message = document.getElementById("message").value.trim();
+    selectedImage = null;
 
-  if(selectedMode === "base"){
-    if(!th){
-      alert("Pehle Town Hall select karo.");
+    fileInput.value = "";
+
+    preview.src = "";
+
+    preview.style.display =
+      "none";
+
+    imageActions.style.display =
+      "none";
+
+    statusBox.textContent = "";
+
+  }
+);
+
+
+function emojiFor(
+  name,
+  type
+) {
+
+  const n =
+    name.toLowerCase();
+
+  if (type === "SPELL") {
+    return "🧪";
+  }
+
+  if (type === "HERO") {
+    return "👑";
+  }
+
+  if (n.includes("dragon")) {
+    return "🐉";
+  }
+
+  if (n.includes("balloon")) {
+    return "🎈";
+  }
+
+  if (n.includes("wizard")) {
+    return "🧙";
+  }
+
+  if (n.includes("archer")) {
+    return "🏹";
+  }
+
+  if (n.includes("barbarian")) {
+    return "⚔️";
+  }
+
+  if (n.includes("giant")) {
+    return "🛡️";
+  }
+
+  if (n.includes("healer")) {
+    return "💫";
+  }
+
+  if (n.includes("miner")) {
+    return "⛏️";
+  }
+
+  if (n.includes("hog")) {
+    return "🐗";
+  }
+
+  if (n.includes("pekka")) {
+    return "🤖";
+  }
+
+  return "🪖";
+
+}
+
+
+function escapeHtml(s) {
+
+  return s.replace(
+    /[&<>"']/g,
+    function(c) {
+
+      return {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      }[c];
+
+    }
+  );
+
+}
+
+
+function buildCards(text) {
+
+  iconGrid.innerHTML = "";
+
+  let count = 0;
+
+  text
+  .split("\\n")
+  .forEach(function(line) {
+
+    const match =
+      line.match(
+        /^\\[(UNIT|SPELL|HERO)\\]\\s*([^|]+)\\|?\\s*([^|]*)/i
+      );
+
+    if (!match) {
       return;
     }
 
-    const n = Number(th.replace("TH",""));
+    const type =
+      match[1].toUpperCase();
 
-    if(n < 4){
-      alert("War Base Design TH4 se TH18 ke liye hai.");
-      return;
-    }
+    const name =
+      match[2].trim();
 
-    message =
-      "Create a " + (baseType || "war") +
-      " base design plan for " + th +
-      ". Explain Town Hall placement, major defense placement, compartments, traps and weaknesses. " +
-      message;
-  }
+    const info =
+      match[3].trim();
 
-  if(!message && !selectedImage){
-    alert("Question likho ya screenshot upload karo.");
-    return;
-  }
+    const card =
+      document.createElement(
+        "div"
+      );
 
-  if(selectedImage && !th){
-    alert("Screenshot analysis ke liye apna Town Hall select karo.");
-    return;
-  }
+    card.className =
+      "unit";
 
-  if(selectedImage && selectedMode === "attack"){
-    const choice = confirm(
-      "Screenshot ke liye OK = WAR strategy\\nCancel = FARMING strategy"
+    card.innerHTML =
+      '<div class="unitIcon">' +
+      emojiFor(name, type) +
+      '</div>' +
+      '<b>' +
+      escapeHtml(name) +
+      '</b>' +
+      '<span>' +
+      escapeHtml(
+        info || type
+      ) +
+      '</span>';
+
+    iconGrid.appendChild(
+      card
     );
 
-    selectedMode = choice ? "war" : "farming";
-  }
+    count++;
 
-  send.disabled = true;
+  });
 
-  statusBox.textContent =
-    selectedImage
+  loadout.style.display =
+    count
+    ? "block"
+    : "none";
+
+}
+
+
+send.addEventListener(
+  "click",
+  async function() {
+
+    const th =
+      document
+      .getElementById("th")
+      .value;
+
+    let message =
+      document
+      .getElementById("message")
+      .value
+      .trim();
+
+
+    if (
+      selectedMode === "base"
+    ) {
+
+      if (!th) {
+
+        alert(
+          "Pehle Town Hall select karo."
+        );
+
+        return;
+      }
+
+      const thNumber =
+        Number(
+          th.replace(
+            "TH",
+            ""
+          )
+        );
+
+      if (thNumber < 4) {
+
+        alert(
+          "War Base Design TH4 se TH18 ke liye hai."
+        );
+
+        return;
+      }
+
+      message =
+        "Create a " +
+        (baseType || "war") +
+        " base design plan for " +
+        th +
+        ". " +
+        message;
+
+    }
+
+
+    if (
+      !message &&
+      !selectedImage
+    ) {
+
+      alert(
+        "Question likho ya screenshot upload karo."
+      );
+
+      return;
+    }
+
+
+    if (
+      selectedImage &&
+      !th
+    ) {
+
+      alert(
+        "Screenshot analysis ke liye apna Town Hall select karo."
+      );
+
+      return;
+    }
+
+
+    if (
+      selectedImage &&
+      selectedMode === "attack"
+    ) {
+
+      const choice =
+        confirm(
+          "OK = WAR strategy\\nCancel = FARMING strategy"
+        );
+
+      selectedMode =
+        choice
+        ? "war"
+        : "farming";
+
+    }
+
+
+    send.disabled = true;
+
+    statusBox.textContent =
+      selectedImage
       ? "🔍 Base screenshot analyze ho raha hai..."
       : "🤖 Strategy ban rahi hai...";
 
-  answer.style.display = "none";
-  answer.textContent = "";
+    answer.style.display =
+      "none";
 
-  try{
-    const response = await fetch("/api/ask",{
-      method:"POST",
-      headers:{"content-type":"application/json"},
-      body:JSON.stringify({
-        message:message,
-        mode:selectedMode,
-        th:th,
-        image:selectedImage
-      })
-    });
+    loadout.style.display =
+      "none";
 
-    const data = await response.json();
+    practice.style.display =
+      "none";
 
-    if(!response.ok){
-      throw new Error(data.error || "Request failed");
+
+    try {
+
+      const response =
+        await fetch(
+          "/api/ask",
+          {
+            method: "POST",
+
+            headers: {
+              "content-type":
+                "application/json"
+            },
+
+            body:
+              JSON.stringify({
+                message: message,
+                mode: selectedMode,
+                th: th,
+                image: selectedImage
+              })
+          }
+        );
+
+
+      const data =
+        await response.json();
+
+
+      if (!response.ok) {
+
+        throw new Error(
+          data.error ||
+          "Request failed"
+        );
+
+      }
+
+
+      answer.textContent =
+        data.reply;
+
+      answer.style.display =
+        "block";
+
+
+      buildCards(
+        data.reply
+      );
+
+
+      if (
+        selectedImage &&
+        selectedMode === "war"
+      ) {
+
+        practice.style.display =
+          "block";
+
+      }
+
+
+      statusBox.textContent =
+        "✅ Strategy ready";
+
+
+      answer.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+
+
+    } catch (e) {
+
+      statusBox.textContent =
+        "❌ Error";
+
+      answer.textContent =
+        "Error: " +
+        (
+          e.message ||
+          "Unknown error"
+        );
+
+      answer.style.display =
+        "block";
+
     }
 
-    answer.textContent = data.reply;
-    answer.style.display = "block";
-    statusBox.textContent = "✅ Strategy ready";
 
-    answer.scrollIntoView({
-      behavior:"smooth",
-      block:"start"
-    });
+    send.disabled =
+      false;
 
-  }catch(err){
-    statusBox.textContent = "❌ Error";
-    answer.textContent =
-      "Error: " + (err.message || "Unknown error");
-    answer.style.display = "block";
   }
+);
 
-  send.disabled = false;
-});
 </script>
 
 </body>
