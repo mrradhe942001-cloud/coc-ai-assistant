@@ -1,24 +1,654 @@
+const MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
+
+const SYSTEM = `You are CoC Battle AI, a Clash of Clans strategy assistant.
+
+Support Town Hall 1 through Town Hall 18 for attack and farming advice.
+
+IMPORTANT RULES:
+- Use only troops, spells, heroes, pets, siege machines and hero equipment actually available at the user's Town Hall.
+- Never invent troops, spells, buildings, heroes or game mechanics.
+- If you are uncertain about a game fact, say so instead of inventing it.
+- Ask for Town Hall level when it is needed and not provided.
+- Reply in simple Hinglish unless the user asks for another language.
+
+ATTACK STRATEGY:
+Give:
+1. Recommended army with troop quantities.
+2. Spells with quantities.
+3. Heroes and pets when available.
+4. Siege machine and Clan Castle recommendation when relevant.
+5. Entry point using clock positions such as 12, 3, 6 or 9 o'clock.
+6. Funnel instructions.
+7. Exact deployment order.
+8. Main army path through the base.
+9. Spell placement and approximate timing.
+10. Hero ability timing.
+11. Important defense targets.
+12. Backup plan if the main path changes.
+
+FARMING:
+Prioritize good loot, training efficiency and practical armies.
+Explain which resources the strategy is useful for and how to deploy it.
+
+SCREENSHOT ANALYSIS:
+When a Clash of Clans base screenshot is supplied, inspect the visible layout.
+Do not pretend to see a building if it is unclear.
+Identify the likely Town Hall when possible.
+Analyze important visible defenses and base compartments.
+The selected goal will be WAR or FARMING.
+Recommend an army appropriate for the player's Town Hall.
+Describe deployment positions using a clock-face system.
+Explain troop path like:
+ENTRY -> FUNNEL -> MAIN ARMY -> CORE -> TOWN HALL / KEY TARGET.
+Explain what to deploy, where to deploy it, and when.
+Mention spell and hero ability timing.
+If the screenshot is unclear, explicitly tell the user what cannot be identified.
+
+WAR BASE DESIGNS:
+War base design support is for TH4 through TH18.
+Explain anti-2-star, anti-3-star or other requested layout concepts.
+Never invent a Clash of Clans copy-layout URL.
+Only display a copy link when a real verified link has been stored in the application.`;
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+
     if (request.method === "POST" && url.pathname === "/api/ask") {
       try {
-        const { message } = await request.json();
-        if (!message?.trim()) return reply({error:"Message required"},400);
-        if (!env.AI) return reply({error:"Workers AI binding 'AI' is missing."},500);
-        const result = await env.AI.run("@cf/meta/llama-3.2-3b-instruct", {
+        if (!env.AI) {
+          return json({ error: "Workers AI binding 'AI' nahi mila." }, 500);
+        }
+
+        const body = await request.json();
+        const message = String(body.message || "").trim();
+        const mode = String(body.mode || "attack");
+        const th = String(body.th || "");
+        const image = body.image || null;
+
+        if (!message && !image) {
+          return json({ error: "Message ya screenshot bhejo." }, 400);
+        }
+
+        let userPrompt =
+          "Selected mode: " + mode +
+          "\nPlayer Town Hall: " + (th || "not provided") +
+          "\nUser message: " + (message || "Analyze the uploaded base screenshot.");
+
+        if (image) {
+          userPrompt += `
+
+A Clash of Clans base screenshot is attached.
+First analyze only what is actually visible.
+Then give the requested ${mode} strategy.
+Use clock positions for deployment and clearly describe the troop path.`;
+        }
+
+        const input = {
           messages: [
-            {role:"system",content:"You are a Clash of Clans strategy assistant. Help with manual attack strategy, army composition, spell and hero timing, war planning, base analysis, upgrade priorities, and practice. Do not automate gameplay, control the game, evade bans, or promise guaranteed results. Give concise practical advice and ask for Town Hall/base details when needed."},
-            {role:"user",content:message}
-          ]
+            { role: "system", content: SYSTEM },
+            { role: "user", content: userPrompt }
+          ],
+          max_tokens: 1400,
+          temperature: 0.2
+        };
+
+        if (image) input.image = image;
+
+        const result = await env.AI.run(MODEL, input);
+
+        return json({
+          reply:
+            result?.response ||
+            result?.result ||
+            "AI se response nahi mila."
         });
-        return reply({answer: result?.response || "No response received."});
-      } catch(e) { return reply({error:e?.message || "Request failed"},500); }
+      } catch (error) {
+        return json(
+          { error: error?.message || "Unknown error" },
+          500
+        );
+      }
     }
-    return new Response(HTML,{headers:{"content-type":"text/html;charset=UTF-8"}});
+
+    return new Response(PAGE, {
+      headers: {
+        "content-type": "text/html; charset=UTF-8"
+      }
+    });
   }
 };
-function reply(x,status=200){return new Response(JSON.stringify(x),{status,headers:{"content-type":"application/json"}})}
-const HTML=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CoC AI Assistant</title><style>
-*{box-sizing:border-box}body{margin:0;background:#0b1020;color:white;font-family:system-ui}.w{max-width:720px;margin:auto;padding:20px}.c{background:#151c32;border-radius:20px;padding:20px}h1{margin:0}.s{color:#aeb8d4;margin:6px 0 18px}.chat{min-height:320px;max-height:55vh;overflow:auto}.m{padding:12px;margin:10px 0;border-radius:14px;white-space:pre-wrap}.u{background:#274690;margin-left:15%}.b{background:#202943;margin-right:10%}.r{display:flex;gap:8px}textarea{flex:1;background:#0f1629;color:white;border:1px solid #34405f;border-radius:14px;padding:12px;font-size:16px}button{border:0;border-radius:14px;padding:0 18px;background:#ffd54a;font-weight:700}.n{font-size:12px;color:#8f9ab8;margin-top:12px}</style></head><body><div class="w"><div class="c"><h1>⚔️ CoC AI Assistant</h1><div class="s">Attack strategy • War planning • Upgrade advice</div><div id="chat" class="chat"><div class="m b">Hi! Tell me your Town Hall level and what you need help with.</div></div><div class="r"><textarea id="x" rows="3" placeholder="Example: TH12 war attack strategy..."></textarea><button onclick="send()">Send</button></div><div class="n">Strategy assistant only — it does not control or automate Clash of Clans.</div></div></div><script>
-async function send(){let x=document.getElementById('x'),c=document.getElementById('chat'),t=x.value.trim();if(!t)return;let a=document.createElement('div');a.className='m u';a.textContent=t;c.appendChild(a);x.value='';let b=document.createElement('div');b.className='m b';b.textContent='Thinking…';c.appendChild(b);try{let r=await fetch('/api/ask',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({message:t})}),j=await r.json();b.textContent=j.answer||('Error: '+j.error)}catch(e){b.textContent='Error: '+e.message}c.scrollTop=c.scrollHeight}</script></body></html>`;
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      "content-type": "application/json; charset=UTF-8"
+    }
+  });
+}
+
+const PAGE = `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CoC Battle AI</title>
+
+<style>
+*{box-sizing:border-box}
+
+body{
+margin:0;
+font-family:Arial,sans-serif;
+background:#080b12;
+color:#fff;
+}
+
+.app{
+max-width:760px;
+margin:auto;
+padding:18px;
+}
+
+.hero{
+background:linear-gradient(135deg,#182235,#101725);
+border:1px solid #2b3a55;
+border-radius:22px;
+padding:22px;
+margin-bottom:16px;
+}
+
+.hero h1{
+margin:0 0 7px;
+font-size:28px;
+}
+
+.hero p{
+margin:0;
+color:#aebbd0;
+line-height:1.5;
+}
+
+.badge{
+display:inline-block;
+background:#ffc928;
+color:#111;
+font-weight:bold;
+padding:6px 10px;
+border-radius:20px;
+font-size:12px;
+margin-bottom:12px;
+}
+
+.card{
+background:#111722;
+border:1px solid #273247;
+border-radius:18px;
+padding:15px;
+margin-bottom:14px;
+}
+
+.title{
+font-weight:bold;
+font-size:16px;
+margin-bottom:12px;
+}
+
+.modes{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:9px;
+}
+
+.mode{
+border:1px solid #35445f;
+background:#182132;
+color:#fff;
+border-radius:13px;
+padding:12px 7px;
+font-weight:bold;
+cursor:pointer;
+}
+
+.mode.active{
+background:#ffc928;
+color:#111;
+border-color:#ffc928;
+}
+
+select,textarea{
+width:100%;
+background:#090d15;
+border:1px solid #35445f;
+color:white;
+border-radius:12px;
+padding:13px;
+font-size:15px;
+}
+
+textarea{
+min-height:105px;
+resize:vertical;
+margin-top:10px;
+}
+
+.upload{
+display:block;
+border:2px dashed #42516d;
+border-radius:15px;
+padding:18px;
+text-align:center;
+cursor:pointer;
+margin-top:10px;
+background:#0c111b;
+}
+
+.upload strong{
+display:block;
+margin-bottom:5px;
+}
+
+.upload small{
+color:#9cabc2;
+}
+
+#file{
+display:none;
+}
+
+#preview{
+display:none;
+width:100%;
+max-height:350px;
+object-fit:contain;
+margin-top:12px;
+border-radius:13px;
+border:1px solid #34415a;
+}
+
+.imageActions{
+display:none;
+margin-top:8px;
+}
+
+.remove{
+background:#38191c;
+color:#ffb5b5;
+border:1px solid #6b292f;
+padding:8px 12px;
+border-radius:9px;
+}
+
+.send{
+width:100%;
+border:0;
+background:#ffc928;
+color:#111;
+padding:15px;
+font-size:16px;
+font-weight:bold;
+border-radius:13px;
+cursor:pointer;
+margin-top:12px;
+}
+
+.send:disabled{
+opacity:.55;
+}
+
+.answer{
+display:none;
+white-space:pre-wrap;
+line-height:1.65;
+background:#101826;
+border:1px solid #2c3b56;
+border-radius:17px;
+padding:17px;
+margin-top:14px;
+}
+
+.status{
+color:#aebbd0;
+font-size:14px;
+margin-top:10px;
+}
+
+.path{
+margin-top:10px;
+padding:11px;
+background:#0b1019;
+border-radius:11px;
+color:#ffc928;
+font-size:13px;
+}
+
+.bases{
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:8px;
+}
+
+.baseButton{
+background:#172033;
+border:1px solid #34445f;
+color:white;
+border-radius:11px;
+padding:10px 4px;
+}
+
+.note{
+font-size:13px;
+color:#9daac0;
+line-height:1.5;
+margin-top:10px;
+}
+
+footer{
+text-align:center;
+color:#68758a;
+font-size:12px;
+padding:15px;
+}
+
+@media(max-width:480px){
+.hero h1{font-size:24px}
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<div class="hero">
+<div class="badge">AI STRATEGY ASSISTANT</div>
+<h1>⚔️ CoC Battle AI</h1>
+<p>
+TH1–TH18 attack & farming strategy, base screenshot analysis,
+deployment path and TH4–TH18 war-base planning.
+</p>
+</div>
+
+<div class="card">
+<div class="title">1️⃣ Town Hall Select Karo</div>
+
+<select id="th">
+<option value="">Town Hall select karo</option>
+<option>TH1</option>
+<option>TH2</option>
+<option>TH3</option>
+<option>TH4</option>
+<option>TH5</option>
+<option>TH6</option>
+<option>TH7</option>
+<option>TH8</option>
+<option>TH9</option>
+<option>TH10</option>
+<option>TH11</option>
+<option>TH12</option>
+<option>TH13</option>
+<option>TH14</option>
+<option>TH15</option>
+<option>TH16</option>
+<option>TH17</option>
+<option>TH18</option>
+</select>
+</div>
+
+<div class="card">
+<div class="title">2️⃣ Aapko Kya Chahiye?</div>
+
+<div class="modes">
+<button class="mode active" data-mode="attack">
+⚔️ Attack
+</button>
+
+<button class="mode" data-mode="farming">
+💰 Farming
+</button>
+
+<button class="mode" data-mode="war">
+🏆 War Screenshot
+</button>
+
+<button class="mode" data-mode="base">
+🏰 War Base Design
+</button>
+</div>
+</div>
+
+<div class="card" id="baseSection" style="display:none">
+<div class="title">🏰 TH4–TH18 War Base Designs</div>
+
+<div class="modes">
+<button class="mode baseType" data-type="Anti 3 Star">
+🛡️ Anti 3-Star
+</button>
+
+<button class="mode baseType" data-type="Anti 2 Star">
+⭐ Anti 2-Star
+</button>
+</div>
+
+<div class="note">
+AI base layout concept aur building placement explain karega.
+Real in-game “Copy Base” button tabhi add hoga jab verified Clash of
+Clans layout link available hoga. Fake links generate nahi honge.
+</div>
+</div>
+
+<div class="card" id="screenSection">
+<div class="title">3️⃣ Base Screenshot (Optional)</div>
+
+<label class="upload" for="file">
+<strong>📷 Screenshot Upload Karo</strong>
+<small>CoC base ka clear screenshot choose karo</small>
+</label>
+
+<input id="file" type="file" accept="image/png,image/jpeg,image/webp">
+
+<img id="preview">
+
+<div class="imageActions" id="imageActions">
+<button class="remove" id="removeImage">
+✕ Screenshot Remove
+</button>
+</div>
+
+<div class="path">
+📍 Analysis: Entry → Funnel → Main Army → Core → Main Target
+</div>
+</div>
+
+<div class="card">
+<div class="title">4️⃣ Apna Question Likho</div>
+
+<textarea id="message"
+placeholder="Example: Is TH12 base ko 3 star karne ke liye army aur deployment path batao..."></textarea>
+
+<button class="send" id="send">
+⚔️ Strategy Banao
+</button>
+
+<div class="status" id="status"></div>
+</div>
+
+<div class="answer" id="answer"></div>
+
+<footer>
+Strategy assistant only — Clash of Clans ko automatically control nahi karta.
+</footer>
+
+</div>
+
+<script>
+let selectedMode = "attack";
+let selectedImage = null;
+let baseType = "";
+
+const modeButtons = document.querySelectorAll(".mode[data-mode]");
+const baseSection = document.getElementById("baseSection");
+const screenSection = document.getElementById("screenSection");
+const fileInput = document.getElementById("file");
+const preview = document.getElementById("preview");
+const imageActions = document.getElementById("imageActions");
+const statusBox = document.getElementById("status");
+const answer = document.getElementById("answer");
+const send = document.getElementById("send");
+
+modeButtons.forEach(function(btn){
+btn.addEventListener("click",function(){
+modeButtons.forEach(function(b){b.classList.remove("active")});
+btn.classList.add("active");
+
+selectedMode = btn.dataset.mode;
+
+if(selectedMode === "base"){
+baseSection.style.display = "block";
+screenSection.style.display = "none";
+}else{
+baseSection.style.display = "none";
+screenSection.style.display = "block";
+}
+});
+});
+
+document.querySelectorAll(".baseType").forEach(function(btn){
+btn.addEventListener("click",function(){
+document.querySelectorAll(".baseType").forEach(function(b){
+b.classList.remove("active");
+});
+btn.classList.add("active");
+baseType = btn.dataset.type;
+});
+});
+
+fileInput.addEventListener("change",function(){
+const file = fileInput.files[0];
+
+if(!file) return;
+
+if(file.size > 5 * 1024 * 1024){
+alert("Screenshot 5MB se chhota rakho.");
+fileInput.value = "";
+return;
+}
+
+const reader = new FileReader();
+
+reader.onload = function(e){
+selectedImage = e.target.result;
+preview.src = selectedImage;
+preview.style.display = "block";
+imageActions.style.display = "block";
+};
+
+reader.readAsDataURL(file);
+});
+
+document.getElementById("removeImage").addEventListener("click",function(e){
+e.preventDefault();
+selectedImage = null;
+fileInput.value = "";
+preview.src = "";
+preview.style.display = "none";
+imageActions.style.display = "none";
+});
+
+send.addEventListener("click",async function(){
+
+const th = document.getElementById("th").value;
+let message = document.getElementById("message").value.trim();
+
+if(selectedMode === "base"){
+if(!th){
+alert("Pehle Town Hall select karo.");
+return;
+}
+
+const n = Number(th.replace("TH",""));
+
+if(n < 4){
+alert("War Base Design TH4 se TH18 ke liye hai.");
+return;
+}
+
+message =
+"Create a " + (baseType || "war") +
+" base design plan for " + th +
+". Explain Town Hall placement, major defense placement, compartments, traps and weaknesses. " +
+(message || "");
+}
+
+if(selectedImage && selectedMode !== "war" &&
+selectedMode !== "farming" && selectedMode !== "attack"){
+alert("Screenshot analysis ke liye Attack, Farming ya War mode select karo.");
+return;
+}
+
+if(!message && !selectedImage){
+alert("Question likho ya screenshot upload karo.");
+return;
+}
+
+if(selectedImage && !th){
+alert("Screenshot analysis ke liye apna Town Hall select karo.");
+return;
+}
+
+if(selectedImage && selectedMode === "attack"){
+const choice = confirm(
+"Screenshot ke liye OK = WAR strategy\\nCancel = FARMING strategy"
+);
+
+selectedMode = choice ? "war" : "farming";
+}
+
+send.disabled = true;
+statusBox.textContent =
+selectedImage ? "🔍 Base screenshot analyze ho raha hai..." : "🤖 Strategy ban rahi hai...";
+
+answer.style.display = "none";
+answer.textContent = "";
+
+try{
+const response = await fetch("/api/ask",{
+method:"POST",
+headers:{"content-type":"application/json"},
+body:JSON.stringify({
+message:message,
+mode:selectedMode,
+th:th,
+image:selectedImage
+})
+});
+
+const data = await response.json();
+
+if(!response.ok){
+throw new Error(data.error || "Request failed");
+}
+
+answer.textContent = data.reply;
+answer.style.display = "block";
+statusBox.textContent = "✅ Strategy ready";
+
+answer.scrollIntoView({
+behavior:"smooth",
+block:"start"
+});
+
+}catch(err){
+statusBox.textContent = "❌ Error";
+answer.textContent =
+"Error: " + (err.message || "Unknown error");
+answer.style.display = "block";
+}
+
+send.disabled = false;
+});
+</script>
+
+</body>
+</html>`;
