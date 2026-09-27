@@ -93,7 +93,17 @@ export default {
           temperature: 0.2
         };
 
-        if (image) input.image = image;
+        if (image) {
+  const base64 = image.split(",")[1];
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  input.image = [...bytes];
+        }
 
         const result = await env.AI.run(MODEL, input);
 
