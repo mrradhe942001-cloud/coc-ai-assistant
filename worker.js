@@ -6,7 +6,7 @@ export default {
         const { message } = await request.json();
         if (!message?.trim()) return reply({error:"Message required"},400);
         if (!env.AI) return reply({error:"Workers AI binding 'AI' is missing."},500);
-        const result = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+        const result = await env.AI.run("@cf/meta/llama-3.2-3b-instruct", {
           messages: [
             {role:"system",content:"You are a Clash of Clans strategy assistant. Help with manual attack strategy, army composition, spell and hero timing, war planning, base analysis, upgrade priorities, and practice. Do not automate gameplay, control the game, evade bans, or promise guaranteed results. Give concise practical advice and ask for Town Hall/base details when needed."},
             {role:"user",content:message}
