@@ -72,16 +72,16 @@ export default {
 
         let userPrompt =
           "Selected mode: " + mode +
-          "\nPlayer Town Hall: " + (th || "not provided") +
-          "\nUser message: " + (message || "Analyze the uploaded base screenshot.");
+          "\\nPlayer Town Hall: " + (th || "not provided") +
+          "\\nUser message: " +
+          (message || "Analyze the uploaded base screenshot.");
 
         if (image) {
-          userPrompt += `
-
-A Clash of Clans base screenshot is attached.
-First analyze only what is actually visible.
-Then give the requested ${mode} strategy.
-Use clock positions for deployment and clearly describe the troop path.`;
+          userPrompt +=
+            "\\nA Clash of Clans base screenshot is attached." +
+            "\\nAnalyze only what is actually visible." +
+            "\\nUse clock positions for deployment." +
+            "\\nExplain troop path, deployment order, spells and hero timing.";
         }
 
         const input = {
@@ -112,9 +112,7 @@ Use clock positions for deployment and clearly describe the troop path.`;
     }
 
     return new Response(PAGE, {
-      headers: {
-        "content-type": "text/html; charset=UTF-8"
-      }
+      headers: { "content-type": "text/html; charset=UTF-8" }
     });
   }
 };
@@ -122,9 +120,7 @@ Use clock positions for deployment and clearly describe the troop path.`;
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: {
-      "content-type": "application/json; charset=UTF-8"
-    }
+    headers: { "content-type": "application/json; charset=UTF-8" }
   });
 }
 
@@ -137,304 +133,77 @@ const PAGE = `<!doctype html>
 
 <style>
 *{box-sizing:border-box}
-
-body{
-margin:0;
-font-family:Arial,sans-serif;
-background:#080b12;
-color:#fff;
-}
-
-.app{
-max-width:760px;
-margin:auto;
-padding:18px;
-}
-
-.hero{
-background:linear-gradient(135deg,#182235,#101725);
-border:1px solid #2b3a55;
-border-radius:22px;
-padding:22px;
-margin-bottom:16px;
-}
-
-.hero h1{
-margin:0 0 7px;
-font-size:28px;
-}
-
-.hero p{
-margin:0;
-color:#aebbd0;
-line-height:1.5;
-}
-
-.badge{
-display:inline-block;
-background:#ffc928;
-color:#111;
-font-weight:bold;
-padding:6px 10px;
-border-radius:20px;
-font-size:12px;
-margin-bottom:12px;
-}
-
-.card{
-background:#111722;
-border:1px solid #273247;
-border-radius:18px;
-padding:15px;
-margin-bottom:14px;
-}
-
-.title{
-font-weight:bold;
-font-size:16px;
-margin-bottom:12px;
-}
-
-.modes{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:9px;
-}
-
-.mode{
-border:1px solid #35445f;
-background:#182132;
-color:#fff;
-border-radius:13px;
-padding:12px 7px;
-font-weight:bold;
-cursor:pointer;
-}
-
-.mode.active{
-background:#ffc928;
-color:#111;
-border-color:#ffc928;
-}
-
-select,textarea{
-width:100%;
-background:#090d15;
-border:1px solid #35445f;
-color:white;
-border-radius:12px;
-padding:13px;
-font-size:15px;
-}
-
-textarea{
-min-height:105px;
-resize:vertical;
-margin-top:10px;
-}
-
-.upload{
-display:block;
-border:2px dashed #42516d;
-border-radius:15px;
-padding:18px;
-text-align:center;
-cursor:pointer;
-margin-top:10px;
-background:#0c111b;
-}
-
-.upload strong{
-display:block;
-margin-bottom:5px;
-}
-
-.upload small{
-color:#9cabc2;
-}
-
-#file{
-display:none;
-}
-
-#preview{
-display:none;
-width:100%;
-max-height:350px;
-object-fit:contain;
-margin-top:12px;
-border-radius:13px;
-border:1px solid #34415a;
-}
-
-.imageActions{
-display:none;
-margin-top:8px;
-}
-
-.remove{
-background:#38191c;
-color:#ffb5b5;
-border:1px solid #6b292f;
-padding:8px 12px;
-border-radius:9px;
-}
-
-.send{
-width:100%;
-border:0;
-background:#ffc928;
-color:#111;
-padding:15px;
-font-size:16px;
-font-weight:bold;
-border-radius:13px;
-cursor:pointer;
-margin-top:12px;
-}
-
-.send:disabled{
-opacity:.55;
-}
-
-.answer{
-display:none;
-white-space:pre-wrap;
-line-height:1.65;
-background:#101826;
-border:1px solid #2c3b56;
-border-radius:17px;
-padding:17px;
-margin-top:14px;
-}
-
-.status{
-color:#aebbd0;
-font-size:14px;
-margin-top:10px;
-}
-
-.path{
-margin-top:10px;
-padding:11px;
-background:#0b1019;
-border-radius:11px;
-color:#ffc928;
-font-size:13px;
-}
-
-.bases{
-display:grid;
-grid-template-columns:repeat(3,1fr);
-gap:8px;
-}
-
-.baseButton{
-background:#172033;
-border:1px solid #34445f;
-color:white;
-border-radius:11px;
-padding:10px 4px;
-}
-
-.note{
-font-size:13px;
-color:#9daac0;
-line-height:1.5;
-margin-top:10px;
-}
-
-footer{
-text-align:center;
-color:#68758a;
-font-size:12px;
-padding:15px;
-}
-
-@media(max-width:480px){
-.hero h1{font-size:24px}
-}
+body{margin:0;font-family:Arial,sans-serif;background:#080b12;color:#fff}
+.app{max-width:760px;margin:auto;padding:18px}
+.hero{background:linear-gradient(135deg,#182235,#101725);border:1px solid #2b3a55;border-radius:22px;padding:22px;margin-bottom:16px}
+.hero h1{margin:0 0 7px;font-size:28px}
+.hero p{margin:0;color:#aebbd0;line-height:1.5}
+.badge{display:inline-block;background:#ffc928;color:#111;font-weight:bold;padding:6px 10px;border-radius:20px;font-size:12px;margin-bottom:12px}
+.card{background:#111722;border:1px solid #273247;border-radius:18px;padding:15px;margin-bottom:14px}
+.title{font-weight:bold;font-size:16px;margin-bottom:12px}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.mode{border:1px solid #35445f;background:#182132;color:#fff;border-radius:13px;padding:12px 7px;font-weight:bold;cursor:pointer}
+.mode.active{background:#ffc928;color:#111;border-color:#ffc928}
+select,textarea{width:100%;background:#090d15;border:1px solid #35445f;color:white;border-radius:12px;padding:13px;font-size:15px}
+textarea{min-height:105px;resize:vertical;margin-top:10px}
+.upload{display:block;border:2px dashed #42516d;border-radius:15px;padding:18px;text-align:center;cursor:pointer;margin-top:10px;background:#0c111b}
+.upload strong{display:block;margin-bottom:5px}
+.upload small{color:#9cabc2}
+#file{display:none}
+#preview{display:none;width:100%;max-height:350px;object-fit:contain;margin-top:12px;border-radius:13px;border:1px solid #34415a}
+.imageActions{display:none;margin-top:8px}
+.remove{background:#38191c;color:#ffb5b5;border:1px solid #6b292f;padding:8px 12px;border-radius:9px}
+.send{width:100%;border:0;background:#ffc928;color:#111;padding:15px;font-size:16px;font-weight:bold;border-radius:13px;cursor:pointer;margin-top:12px}
+.send:disabled{opacity:.55}
+.answer{display:none;white-space:pre-wrap;line-height:1.65;background:#101826;border:1px solid #2c3b56;border-radius:17px;padding:17px;margin-top:14px}
+.status{color:#aebbd0;font-size:14px;margin-top:10px}
+.path{margin-top:10px;padding:11px;background:#0b1019;border-radius:11px;color:#ffc928;font-size:13px}
+.note{font-size:13px;color:#9daac0;line-height:1.5;margin-top:10px}
+footer{text-align:center;color:#68758a;font-size:12px;padding:15px}
+@media(max-width:480px){.hero h1{font-size:24px}}
 </style>
 </head>
 
 <body>
-
 <div class="app">
 
 <div class="hero">
 <div class="badge">AI STRATEGY ASSISTANT</div>
 <h1>⚔️ CoC Battle AI</h1>
-<p>
-TH1–TH18 attack & farming strategy, base screenshot analysis,
-deployment path and TH4–TH18 war-base planning.
-</p>
+<p>TH1–TH18 attack & farming strategy, screenshot analysis, deployment path and TH4–TH18 war-base planning.</p>
 </div>
 
 <div class="card">
 <div class="title">1️⃣ Town Hall Select Karo</div>
-
 <select id="th">
 <option value="">Town Hall select karo</option>
-<option>TH1</option>
-<option>TH2</option>
-<option>TH3</option>
-<option>TH4</option>
-<option>TH5</option>
-<option>TH6</option>
-<option>TH7</option>
-<option>TH8</option>
-<option>TH9</option>
-<option>TH10</option>
-<option>TH11</option>
-<option>TH12</option>
-<option>TH13</option>
-<option>TH14</option>
-<option>TH15</option>
-<option>TH16</option>
-<option>TH17</option>
-<option>TH18</option>
+<option>TH1</option><option>TH2</option><option>TH3</option>
+<option>TH4</option><option>TH5</option><option>TH6</option>
+<option>TH7</option><option>TH8</option><option>TH9</option>
+<option>TH10</option><option>TH11</option><option>TH12</option>
+<option>TH13</option><option>TH14</option><option>TH15</option>
+<option>TH16</option><option>TH17</option><option>TH18</option>
 </select>
 </div>
 
 <div class="card">
 <div class="title">2️⃣ Aapko Kya Chahiye?</div>
-
 <div class="modes">
-<button class="mode active" data-mode="attack">
-⚔️ Attack
-</button>
-
-<button class="mode" data-mode="farming">
-💰 Farming
-</button>
-
-<button class="mode" data-mode="war">
-🏆 War Screenshot
-</button>
-
-<button class="mode" data-mode="base">
-🏰 War Base Design
-</button>
+<button class="mode active" data-mode="attack">⚔️ Attack</button>
+<button class="mode" data-mode="farming">💰 Farming</button>
+<button class="mode" data-mode="war">🏆 War Screenshot</button>
+<button class="mode" data-mode="base">🏰 War Base Design</button>
 </div>
 </div>
 
 <div class="card" id="baseSection" style="display:none">
 <div class="title">🏰 TH4–TH18 War Base Designs</div>
-
 <div class="modes">
-<button class="mode baseType" data-type="Anti 3 Star">
-🛡️ Anti 3-Star
-</button>
-
-<button class="mode baseType" data-type="Anti 2 Star">
-⭐ Anti 2-Star
-</button>
+<button class="mode baseType" data-type="Anti 3 Star">🛡️ Anti 3-Star</button>
+<button class="mode baseType" data-type="Anti 2 Star">⭐ Anti 2-Star</button>
 </div>
-
 <div class="note">
-AI base layout concept aur building placement explain karega.
-Real in-game “Copy Base” button tabhi add hoga jab verified Clash of
-Clans layout link available hoga. Fake links generate nahi honge.
+Real in-game Copy Base link sirf verified Clash of Clans layout link available hone par dikhaya jayega.
 </div>
 </div>
 
@@ -443,7 +212,7 @@ Clans layout link available hoga. Fake links generate nahi honge.
 
 <label class="upload" for="file">
 <strong>📷 Screenshot Upload Karo</strong>
-<small>CoC base ka clear screenshot choose karo</small>
+<small>Maximum 20 MB • large image automatically optimize hogi</small>
 </label>
 
 <input id="file" type="file" accept="image/png,image/jpeg,image/webp">
@@ -451,9 +220,7 @@ Clans layout link available hoga. Fake links generate nahi honge.
 <img id="preview">
 
 <div class="imageActions" id="imageActions">
-<button class="remove" id="removeImage">
-✕ Screenshot Remove
-</button>
+<button class="remove" id="removeImage">✕ Screenshot Remove</button>
 </div>
 
 <div class="path">
@@ -467,10 +234,7 @@ Clans layout link available hoga. Fake links generate nahi honge.
 <textarea id="message"
 placeholder="Example: Is TH12 base ko 3 star karne ke liye army aur deployment path batao..."></textarea>
 
-<button class="send" id="send">
-⚔️ Strategy Banao
-</button>
-
+<button class="send" id="send">⚔️ Strategy Banao</button>
 <div class="status" id="status"></div>
 </div>
 
@@ -498,155 +262,218 @@ const answer = document.getElementById("answer");
 const send = document.getElementById("send");
 
 modeButtons.forEach(function(btn){
-btn.addEventListener("click",function(){
-modeButtons.forEach(function(b){b.classList.remove("active")});
-btn.classList.add("active");
+  btn.addEventListener("click",function(){
+    modeButtons.forEach(function(b){b.classList.remove("active")});
+    btn.classList.add("active");
+    selectedMode = btn.dataset.mode;
 
-selectedMode = btn.dataset.mode;
-
-if(selectedMode === "base"){
-baseSection.style.display = "block";
-screenSection.style.display = "none";
-}else{
-baseSection.style.display = "none";
-screenSection.style.display = "block";
-}
-});
+    if(selectedMode === "base"){
+      baseSection.style.display = "block";
+      screenSection.style.display = "none";
+    }else{
+      baseSection.style.display = "none";
+      screenSection.style.display = "block";
+    }
+  });
 });
 
 document.querySelectorAll(".baseType").forEach(function(btn){
-btn.addEventListener("click",function(){
-document.querySelectorAll(".baseType").forEach(function(b){
-b.classList.remove("active");
-});
-btn.classList.add("active");
-baseType = btn.dataset.type;
-});
+  btn.addEventListener("click",function(){
+    document.querySelectorAll(".baseType").forEach(function(b){
+      b.classList.remove("active");
+    });
+    btn.classList.add("active");
+    baseType = btn.dataset.type;
+  });
 });
 
-fileInput.addEventListener("change",function(){
-const file = fileInput.files[0];
+/* 20 MB upload + automatic image optimization */
+fileInput.addEventListener("change", async function(){
+  const file = fileInput.files[0];
+  if(!file) return;
 
-if(!file) return;
+  const MAX_UPLOAD = 20 * 1024 * 1024;
 
-if(file.size > 5 * 1024 * 1024){
-alert("Screenshot 5MB se chhota rakho.");
-fileInput.value = "";
-return;
+  if(file.size > MAX_UPLOAD){
+    alert("Screenshot maximum 20 MB ka ho sakta hai.");
+    fileInput.value = "";
+    return;
+  }
+
+  statusBox.textContent = "🖼️ Screenshot optimize ho raha hai...";
+
+  try{
+    selectedImage = await optimizeImage(file);
+
+    preview.src = selectedImage;
+    preview.style.display = "block";
+    imageActions.style.display = "block";
+
+    statusBox.textContent = "✅ Screenshot ready";
+  }catch(err){
+    selectedImage = null;
+    fileInput.value = "";
+    statusBox.textContent = "";
+    alert("Screenshot process nahi ho paya. Dusri image try karo.");
+  }
+});
+
+function optimizeImage(file){
+  return new Promise(function(resolve,reject){
+    const reader = new FileReader();
+
+    reader.onerror = reject;
+
+    reader.onload = function(e){
+      const img = new Image();
+
+      img.onerror = reject;
+
+      img.onload = function(){
+        const MAX_SIDE = 1600;
+
+        let width = img.width;
+        let height = img.height;
+
+        if(width > MAX_SIDE || height > MAX_SIDE){
+          const scale = Math.min(
+            MAX_SIDE / width,
+            MAX_SIDE / height
+          );
+
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d");
+
+        ctx.drawImage(
+          img,
+          0,
+          0,
+          width,
+          height
+        );
+
+        /* JPEG 88% keeps base details readable while reducing size */
+        const optimized = canvas.toDataURL(
+          "image/jpeg",
+          0.88
+        );
+
+        resolve(optimized);
+      };
+
+      img.src = e.target.result;
+    };
+
+    reader.readAsDataURL(file);
+  });
 }
 
-const reader = new FileReader();
-
-reader.onload = function(e){
-selectedImage = e.target.result;
-preview.src = selectedImage;
-preview.style.display = "block";
-imageActions.style.display = "block";
-};
-
-reader.readAsDataURL(file);
-});
-
 document.getElementById("removeImage").addEventListener("click",function(e){
-e.preventDefault();
-selectedImage = null;
-fileInput.value = "";
-preview.src = "";
-preview.style.display = "none";
-imageActions.style.display = "none";
+  e.preventDefault();
+
+  selectedImage = null;
+  fileInput.value = "";
+  preview.src = "";
+  preview.style.display = "none";
+  imageActions.style.display = "none";
+  statusBox.textContent = "";
 });
 
 send.addEventListener("click",async function(){
 
-const th = document.getElementById("th").value;
-let message = document.getElementById("message").value.trim();
+  const th = document.getElementById("th").value;
+  let message = document.getElementById("message").value.trim();
 
-if(selectedMode === "base"){
-if(!th){
-alert("Pehle Town Hall select karo.");
-return;
-}
+  if(selectedMode === "base"){
+    if(!th){
+      alert("Pehle Town Hall select karo.");
+      return;
+    }
 
-const n = Number(th.replace("TH",""));
+    const n = Number(th.replace("TH",""));
 
-if(n < 4){
-alert("War Base Design TH4 se TH18 ke liye hai.");
-return;
-}
+    if(n < 4){
+      alert("War Base Design TH4 se TH18 ke liye hai.");
+      return;
+    }
 
-message =
-"Create a " + (baseType || "war") +
-" base design plan for " + th +
-". Explain Town Hall placement, major defense placement, compartments, traps and weaknesses. " +
-(message || "");
-}
+    message =
+      "Create a " + (baseType || "war") +
+      " base design plan for " + th +
+      ". Explain Town Hall placement, major defense placement, compartments, traps and weaknesses. " +
+      message;
+  }
 
-if(selectedImage && selectedMode !== "war" &&
-selectedMode !== "farming" && selectedMode !== "attack"){
-alert("Screenshot analysis ke liye Attack, Farming ya War mode select karo.");
-return;
-}
+  if(!message && !selectedImage){
+    alert("Question likho ya screenshot upload karo.");
+    return;
+  }
 
-if(!message && !selectedImage){
-alert("Question likho ya screenshot upload karo.");
-return;
-}
+  if(selectedImage && !th){
+    alert("Screenshot analysis ke liye apna Town Hall select karo.");
+    return;
+  }
 
-if(selectedImage && !th){
-alert("Screenshot analysis ke liye apna Town Hall select karo.");
-return;
-}
+  if(selectedImage && selectedMode === "attack"){
+    const choice = confirm(
+      "Screenshot ke liye OK = WAR strategy\\nCancel = FARMING strategy"
+    );
 
-if(selectedImage && selectedMode === "attack"){
-const choice = confirm(
-"Screenshot ke liye OK = WAR strategy\\nCancel = FARMING strategy"
-);
+    selectedMode = choice ? "war" : "farming";
+  }
 
-selectedMode = choice ? "war" : "farming";
-}
+  send.disabled = true;
 
-send.disabled = true;
-statusBox.textContent =
-selectedImage ? "🔍 Base screenshot analyze ho raha hai..." : "🤖 Strategy ban rahi hai...";
+  statusBox.textContent =
+    selectedImage
+      ? "🔍 Base screenshot analyze ho raha hai..."
+      : "🤖 Strategy ban rahi hai...";
 
-answer.style.display = "none";
-answer.textContent = "";
+  answer.style.display = "none";
+  answer.textContent = "";
 
-try{
-const response = await fetch("/api/ask",{
-method:"POST",
-headers:{"content-type":"application/json"},
-body:JSON.stringify({
-message:message,
-mode:selectedMode,
-th:th,
-image:selectedImage
-})
-});
+  try{
+    const response = await fetch("/api/ask",{
+      method:"POST",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify({
+        message:message,
+        mode:selectedMode,
+        th:th,
+        image:selectedImage
+      })
+    });
 
-const data = await response.json();
+    const data = await response.json();
 
-if(!response.ok){
-throw new Error(data.error || "Request failed");
-}
+    if(!response.ok){
+      throw new Error(data.error || "Request failed");
+    }
 
-answer.textContent = data.reply;
-answer.style.display = "block";
-statusBox.textContent = "✅ Strategy ready";
+    answer.textContent = data.reply;
+    answer.style.display = "block";
+    statusBox.textContent = "✅ Strategy ready";
 
-answer.scrollIntoView({
-behavior:"smooth",
-block:"start"
-});
+    answer.scrollIntoView({
+      behavior:"smooth",
+      block:"start"
+    });
 
-}catch(err){
-statusBox.textContent = "❌ Error";
-answer.textContent =
-"Error: " + (err.message || "Unknown error");
-answer.style.display = "block";
-}
+  }catch(err){
+    statusBox.textContent = "❌ Error";
+    answer.textContent =
+      "Error: " + (err.message || "Unknown error");
+    answer.style.display = "block";
+  }
 
-send.disabled = false;
+  send.disabled = false;
 });
 </script>
 
