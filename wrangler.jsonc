@@ -1,5 +1,5 @@
 {
-  "name": "coc-ai-assistant",
+  "name": "coc-ai-assistant-v2",
   "main": "worker-v11.js",
   "compatibility_date": "2026-09-29",
   "ai": {
