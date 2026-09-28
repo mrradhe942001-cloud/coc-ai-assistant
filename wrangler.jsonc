@@ -1,6 +1,6 @@
 {
   "name": "coc-ai-assistant-v2",
-  "main": "worker-v11.js",
+  "main": "worker-v12.js",
   "compatibility_date": "2026-09-28",
   "ai": {
     "binding": "AI"
