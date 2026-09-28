@@ -329,7 +329,6 @@ function parseResult(result) {
 
   return JSON.parse(text);
 }
-
 function validatePlan(plan) {
   if (!plan || typeof plan !== "object") {
     return {
@@ -548,13 +547,15 @@ Reply only according to the supplied JSON schema.
             content: prompt
           }
         ];
-
         const input = {
-          messages,
-          guided_json: PLAN_SCHEMA,
-          max_tokens: 3000,
-          temperature: 0.1
-        };
+  messages,
+  response_format: {
+    type: "json_schema",
+    json_schema: PLAN_SCHEMA
+  },
+  max_tokens: 3000,
+  temperature: 0.1
+};
 
         if (image) {
           const base64 = image.split(",")[1];
