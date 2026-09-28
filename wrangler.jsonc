@@ -1,1 +1,1 @@
-{"name":"coc-ai-assistant","main":"worker.js","compatibility_date":"2026-09-27","ai":{"binding":"AI"}}
+{"name":"coc-ai-assistant",main":"worker-v11.js",compatibility_date":"2026-09-27","ai":{"binding":"AI"}}
