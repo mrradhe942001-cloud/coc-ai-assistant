@@ -1,72 +1,527 @@
-const MODEL="@cf/meta/llama-4-scout-17b-16e-instruct";
-const STRATEGIES={"TH4": [{"id": "GIALOON", "name": "GiaLoon", "units": ["Giant", "Wall Breaker", "Balloon", "Archer"], "style": "Hybrid"}], "TH5": [{"id": "GIANT_WIZ", "name": "Giants + Wizards", "units": ["Giant", "Wall Breaker", "Wizard", "Archer", "Barbarian"], "style": "Ground"}], "TH6": [{"id": "GIANT_HEAL", "name": "Giant Ground Push", "units": ["Giant", "Healer", "Wizard", "Wall Breaker"], "style": "Ground"}], "TH7": [{"id": "ZAP_DRAG", "name": "Zap Dragons", "units": ["Dragon", "Balloon"], "style": "Air"}], "TH8": [{"id": "GOVALK", "name": "Golem + Valkyries", "units": ["Golem", "Valkyrie", "Wizard", "Wall Breaker"], "style": "Ground"}, {"id": "DRAG", "name": "Dragon War", "units": ["Dragon", "Balloon"], "style": "Air"}], "TH9": [{"id": "ZAP_WITCH", "name": "Zap Witches", "units": ["Witch", "Golem", "Wizard"], "style": "Ground"}, {"id": "ZAP_DRAG", "name": "Zap Dragons", "units": ["Dragon", "Balloon", "Baby Dragon"], "style": "Air"}], "TH10": [{"id": "ZAP_DRAG", "name": "Zap Dragons", "units": ["Dragon", "Balloon", "Baby Dragon"], "style": "Air"}, {"id": "WITCH", "name": "Witch Smash", "units": ["Witch", "Golem", "Bowler"], "style": "Ground"}], "TH11": [{"id": "ZAP_WITCH", "name": "Zap Witches", "units": ["Witch", "Golem", "Bowler"], "style": "Ground"}, {"id": "QC_HYBRID", "name": "Queen Charge Hybrid", "units": ["Miner", "Hog Rider", "Healer"], "style": "Hybrid"}], "TH12": [{"id": "ZAP_DRAG", "name": "Zap Dragons", "units": ["Dragon", "Balloon", "Baby Dragon"], "style": "Air"}, {"id": "SUPER_WITCH_FB", "name": "Super Witch Fireball", "units": ["Super Witch", "Healer", "Balloon"], "style": "Ground"}, {"id": "QC_HYBRID", "name": "Queen Charge Hybrid", "units": ["Miner", "Hog Rider", "Healer"], "style": "Hybrid"}], "TH13": [{"id": "RC_DRAG", "name": "Royal Champion Dive Dragons", "units": ["Dragon", "Balloon", "Baby Dragon", "Wall Breaker"], "style": "Air"}, {"id": "YETI_SARCH", "name": "Yeti Super Archer", "units": ["Yeti", "Super Archer", "Healer"], "style": "Ground"}, {"id": "HYDRA_CLONE", "name": "Super Archer Clone Hydra", "units": ["Dragon", "Dragon Rider", "Balloon", "Super Archer"], "style": "Air"}], "TH14": [{"id": "SUPER_DRAG", "name": "Super Dragons", "units": ["Super Dragon", "Balloon", "Baby Dragon"], "style": "Air"}, {"id": "DRAG_BLIMP", "name": "Dragon Blimp", "units": ["Dragon", "Balloon", "Baby Dragon"], "style": "Air"}], "TH15": [{"id": "WC_SUPER_YETI", "name": "Warden Charge Super Yetis", "units": ["Super Yeti", "Healer", "Balloon"], "style": "Ground"}, {"id": "FB_ROCKET", "name": "Fireball Rocket Loons", "units": ["Rocket Balloon", "Healer", "Balloon"], "style": "Air"}], "TH16": [{"id": "FB_SUPER_YETI", "name": "Fireball Super Yeti", "units": ["Super Yeti", "Healer", "Balloon"], "style": "Ground"}, {"id": "RC_ROOT", "name": "RC Walk Root Riders", "units": ["Root Rider", "Healer", "Valkyrie"], "style": "Ground"}], "TH17": [{"id": "FB_SUPER_YETI", "name": "Fireball Super Yeti", "units": ["Super Yeti", "Healer", "Balloon"], "style": "Ground"}, {"id": "RC_DRAG", "name": "RC Walk Dragons", "units": ["Dragon", "Dragon Rider", "Balloon"], "style": "Air"}, {"id": "THROWER_HEALER", "name": "Thrower + Healer", "units": ["Thrower", "Healer", "Root Rider"], "style": "Ground"}], "TH18": [{"id": "FB_METEOR", "name": "Fireball Meteor Golems", "units": ["Meteor Golem", "Healer", "Balloon", "Druid"], "style": "Ground"}, {"id": "SURGICAL_EDRAG", "name": "Surgical Electro Dragons", "units": ["Electro Dragon", "Balloon"], "style": "Air"}, {"id": "ROOT_VALK", "name": "Root Rider Valkyries", "units": ["Root Rider", "Valkyrie", "Druid"], "style": "Ground"}, {"id": "DRAGON_RIDER", "name": "Dragon + Dragon Rider", "units": ["Dragon", "Dragon Rider", "Balloon"], "style": "Air"}, {"id": "THROWER_HEALER", "name": "Thrower + Healer", "units": ["Thrower", "Healer", "Root Rider"], "style": "Ground"}]};
-const BASE_CATALOG="https://raw.githubusercontent.com/nschmeller/clash-bases/main/bases.json";
-const HERO_MIN={"Barbarian King":4,"Archer Queen":8,"Minion Prince":9,"Grand Warden":11,"Royal Champion":13,"Dragon Duke":15};
-const HERO_SLOTS={4:1,5:1,6:1,7:1,8:2,9:2,10:2,11:3,12:3,13:4,14:4,15:4,16:4,17:4,18:4};
-const SPELLS=["Lightning Spell","Healing Spell","Rage Spell","Jump Spell","Freeze Spell","Clone Spell","Invisibility Spell","Recall Spell","Poison Spell","Earthquake Spell","Haste Spell","Skeleton Spell","Bat Spell","Overgrowth Spell","Revive Spell"];
-const SIEGES=["None","Wall Wrecker","Battle Blimp","Stone Slammer","Siege Barracks","Log Launcher","Flame Flinger","Battle Drill","Sky Wagon"];
-function nTH(v){return Number(String(v||"").replace(/\D/g,""))||0}
-function fam(th){return STRATEGIES["TH"+nTH(th)]||[]}
-function heroes(th){let n=nTH(th);return Object.keys(HERO_MIN).filter(x=>HERO_MIN[x]<=n)}
-function j(x,s=200){return new Response(JSON.stringify(x),{status:s,headers:{"content-type":"application/json;charset=UTF-8"}})}
-function imageBytes(s){let p=s.indexOf(",");if(p<0)return null;let b=atob(s.slice(p+1)),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return [...u]}
-function box(label){return {type:"object",properties:{x:{type:"number",minimum:0,maximum:96},y:{type:"number",minimum:0,maximum:96},width:{type:"number",minimum:4,maximum:45},height:{type:"number",minimum:4,maximum:45},label:{type:"string",enum:[label]}},required:["x","y","width","height","label"]}}
-function schema(th){let f=fam(th),hs=heroes(th);return {type:"object",properties:{
-rankedIds:{type:"array",minItems:1,maxItems:3,items:{type:"string",enum:f.map(x=>x.id)}},baseRead:{type:"string"},why:{type:"string"},confidence:{type:"string",enum:["high","medium","low"]},
-army:{type:"array",minItems:1,items:{type:"object",properties:{name:{type:"string",enum:[...new Set(f.flatMap(x=>x.units))]},qty:{type:"integer",minimum:1,maximum:80},role:{type:"string"}},required:["name","qty","role"]}},
-spells:{type:"array",items:{type:"object",properties:{name:{type:"string",enum:SPELLS},qty:{type:"integer",minimum:1,maximum:12},role:{type:"string"}},required:["name","qty","role"]}},
-heroes:{type:"array",items:{type:"object",properties:{name:{type:"string",enum:hs},equipment:{type:"string"},role:{type:"string"}},required:["name","equipment","role"]}},
-siege:{type:"object",properties:{name:{type:"string",enum:SIEGES},cc:{type:"string"}},required:["name","cc"]},
-map:{type:"object",properties:{entry:box("1 ENTRY"),funnelL:box("2 FUNNEL LEFT"),funnelR:box("3 FUNNEL RIGHT"),main:box("4 MAIN ARMY"),core:box("5 CORE"),target:box("6 TARGET"),spells:{type:"array",items:box("SPELL ZONE")}},required:["entry","funnelL","funnelR","main","core","target","spells"]},
-steps:{type:"array",minItems:4,items:{type:"string"}},timing:{type:"array",items:{type:"string"}},backup:{type:"array",items:{type:"string"}},warnings:{type:"array",items:{type:"string"}}
-},required:["rankedIds","baseRead","why","confidence","army","spells","heroes","siege","map","steps","timing","backup","warnings"]}}
-function parse(v){v=v?.response??v?.result??v;if(v&&typeof v==="object")return v;if(typeof v!=="string")return null;v=v.trim().replace(/^```json\s*/i,"").replace(/\s*```$/,"");try{return JSON.parse(v)}catch{let a=v.indexOf("{"),b=v.lastIndexOf("}");try{return JSON.parse(v.slice(a,b+1))}catch{return null}}}
-async function plan(env,b){let f=fam(b.th),hs=heroes(b.th),slots=HERO_SLOTS[nTH(b.th)]||0;
-let prompt=`You are a Clash of Clans 2026 WAR base matcher. Screenshot first.
-CLOSED STORED STRATEGIES for ${b.th}:
-${f.map(x=>`${x.id} | ${x.name} | ${x.style} | ONLY units: ${x.units.join(", ")}`).join("\n")}
-RULES:
-- Rank up to THREE different strategy IDs from this stored library, best first. Never invent a strategy name and never merge strategies. Build the army and map only for rankedIds[0].
-- The stored library was researched from current public creator/strategy guides. Do not mention creator/video/source names.
-- Screenshot geometry decides the match: air-defense layout, compartments, Town Hall position, sweepers, core and funnel access.
-- Army can ONLY contain units from chosen strategy. No unrelated troop.
-- Return exactly ${slots} distinct heroes from: ${hs.join(", ")}.
-- Give practical quantities, but if exact housing capacity is not verified say so in warnings. Never claim quantities came verbatim from a creator unless they are stored.
-- Map uses boxes. x/y top-left percent; width/height percent.
-- Do not show coordinates in steps. Steps refer to box numbers only.
-- No 3-star guarantee.`;
-let input={messages:[{role:"system",content:"Return only schema-valid JSON."},{role:"user",content:prompt}],guided_json:schema(b.th),max_tokens:3600,temperature:.05};
-input.image=imageBytes(b.image);return parse(await env.AI.run(MODEL,input))}
-function validate(p,th){if(!p)return"Missing plan";if(!Array.isArray(p.rankedIds)||!p.rankedIds.length)return"No strategy matches";if(new Set(p.rankedIds).size!==p.rankedIds.length)return"Duplicate matches";let f=fam(th).find(x=>x.id===p.rankedIds[0]);if(!f)return"Strategy not stored";for(let a of p.army||[])if(!f.units.includes(a.name))return"Unstored troop "+a.name;let hs=(p.heroes||[]).map(x=>x.name);if(hs.length!==(HERO_SLOTS[nTH(th)]||0))return"Wrong hero count";if(new Set(hs).size!==hs.length)return"Duplicate hero";return""}
-export default{async fetch(req,env){let u=new URL(req.url);
-if(req.method==="GET"&&u.pathname==="/api/icon"){let name=u.searchParams.get("name")||"";let fn=name.replaceAll(" ","_")+"_info.png";try{let r=await fetch("https://clashofclans.fandom.com/wiki/Special:Redirect/file/"+encodeURIComponent(fn),{redirect:"follow"});return new Response(r.body,{status:r.status,headers:{"content-type":r.headers.get("content-type")||"image/png","cache-control":"public,max-age=86400"}})}catch(e){return new Response("",{status:404})}
- if(req.method==="GET"&&u.pathname==="/api/strategies")return j({strategies:fam(u.searchParams.get("th")).map(x=>({id:x.id,name:x.name,style:x.style}))});
-if(req.method==="GET"&&u.pathname==="/api/base-designs"){let n=nTH(u.searchParams.get("th"));if(n<4||n>18)return j({error:"TH4–TH18 only"},400);try{let r=await fetch(BASE_CATALOG,{cf:{cacheTtl:1800,cacheEverything:true}}),d=await r.json();let a=(d.bases||[]).filter(x=>Number(x.town_hall)===n&&String(x.type).toLowerCase()==="war"&&x.image&&/^https:\/\/link\.clashofclans\.com\//.test(x.link||"")).slice(0,12);return j({bases:a})}catch(e){return j({error:"Base gallery load failed"},502)}}
-if(req.method==="POST"&&u.pathname==="/api/ask"){try{let b=await req.json();if(nTH(b.th)<4||nTH(b.th)>18)return j({error:"TH4–TH18 select karo"},400);if(!b.image)return j({error:"Screenshot upload karo"},400);let p=await plan(env,b),e=validate(p,b.th);if(e)return j({error:"Strategy validation failed: "+e},422);let all=fam(b.th),matches=p.rankedIds.map(id=>all.find(x=>x.id===id)).filter(Boolean);return j({ok:true,plan:p,strategy:matches[0],matches,heroSlots:HERO_SLOTS[nTH(b.th)]||0})}catch(e){return j({error:e.message||"Failed"},500)}}
-return new Response(PAGE,{headers:{"content-type":"text/html;charset=UTF-8"}})}};
-const PAGE=`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Clash War Lab V10</title><style>@import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Nunito:wght@600;800;900&display=swap');
-*{box-sizing:border-box}body{margin:0;background:#050913;color:#f7f9ff;font-family:Nunito,Arial,sans-serif}.app{max-width:920px;margin:auto;padding:14px 14px 80px}.hero{border-radius:28px;padding:26px 20px;min-height:220px;background:radial-gradient(circle at 80% 20%,#355b91,#14233d 38%,#080e19 75%);border:1px solid #3b5275;box-shadow:0 18px 45px #0009}.badge{display:inline-block;background:#ffd12f;color:#111;padding:7px 11px;border-radius:999px;font-size:11px;font-weight:900}h1{font-family:'Luckiest Guy',cursive;font-size:38px;letter-spacing:1px;margin:12px 0 5px;text-shadow:0 4px 0 #111827}.sub{color:#9fb0c8;font-size:13px}.pills,.tags{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}.pills span,.tags span{padding:6px 9px;border-radius:999px;background:#0c1728;border:1px solid #405879;font-size:10px;font-weight:800}.card{background:linear-gradient(145deg,#121e32,#080e19);border:1px solid #2f4260;border-radius:22px;padding:16px;margin:13px 0;box-shadow:0 12px 30px #0005}label.title{display:block;font-weight:900;margin-bottom:9px}select,textarea,button{width:100%;border-radius:13px;padding:13px;background:#101a2b;border:1px solid #40516c;color:#fff;font-size:14px}textarea{min-height:75px}.tabs{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.tab.active,.go,.copy{background:linear-gradient(135deg,#fff17c,#ffb800);color:#111;border:0;font-weight:900}.upload{display:block;border:2px dashed #536b8d;border-radius:17px;text-align:center;padding:20px}#file{display:none}#previewBox{display:none;position:relative;overflow:hidden;border-radius:17px;margin-top:12px}#preview{width:100%;display:block}#map{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}#result,#bases{display:none}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.unit{background:#08111f;border:2px solid #314767;border-radius:17px;padding:10px;text-align:center}.unit img{width:70px;height:70px;object-fit:contain;filter:drop-shadow(0 4px 5px #0008)}.match{background:#08111f;border:2px solid #314767;border-radius:16px;padding:11px;margin:8px 0}.match.best{border-color:#ffd12f}.rank{color:#ffd12f;font-family:'Luckiest Guy',cursive;font-size:18px}.qty{color:#ffd12f;font-size:19px;font-weight:900}.role{color:#9fb0c8;font-size:11px}.step{background:#08111f;border-left:3px solid #ffd12f;border-radius:9px;padding:10px;margin:7px 0}.meta{padding:11px;border-radius:12px;background:#071d19;border:1px solid #176b5a;color:#89f1d1}h3{color:#ffd12f;text-transform:uppercase;font-size:15px}.basegrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.base{overflow:hidden;border:1px solid #304461;border-radius:17px;background:#08111f}.base img{width:100%;aspect-ratio:1;object-fit:cover}.basebody{padding:10px}.copy{display:block;text-align:center;text-decoration:none;padding:10px;border-radius:10px;margin-top:8px}.legal{font-size:10px;color:#718198;margin-top:20px}@media(max-width:560px){.grid{grid-template-columns:repeat(2,1fr)}.basegrid{grid-template-columns:1fr}h1{font-size:29px}}
-</style></head><body><div class="app"><section class="hero"><span class="badge">V10 • WAR LAB • 2026</span><h1>⚔️ CLASH WAR LAB</h1><div class="sub">Enemy screenshot → Top strategy matches → visual attack plan</div><div class="pills"><span>TOP MATCHES</span><span>TROOP ICONS</span><span>SCREENSHOT MATCH</span></div></section>
-<div class="card"><label class="title">1️⃣ Town Hall</label><select id="th"><option value="">Select TH</option>${Array.from({length:15},(_,i)=>`<option>TH${i+4}</option>`).join("")}</select></div>
-<div class="card"><div class="tabs"><button class="tab active" data-m="war">📸 Screenshot Attack</button><button class="tab" data-m="base">🏰 War Bases</button></div></div>
-<div id="battle"><div class="card"><label class="title">2️⃣ Stored 2026 Strategies</label><div id="library" class="tags"><span>TH select karo</span></div></div>
-<div class="card"><label class="title">3️⃣ Enemy Base Screenshot</label><label for="file" class="upload">📷 Upload Screenshot<br><span class="sub">20MB max • auto compress</span></label><input id="file" type="file" accept="image/*"><div id="previewBox"><img id="preview"><canvas id="map"></canvas></div></div>
-<div class="card"><label class="title">4️⃣ Optional Details</label><textarea id="notes" placeholder="Hero equipment / levels..."></textarea><button id="go" class="go">Match Best Stored Strategy</button><div id="status" class="sub" style="margin-top:8px"></div></div></div>
-<div id="bases" class="card"><h2>🏰 TH4–TH18 War Bases</h2><div id="baseList"></div></div>
-<div id="result" class="card"><span class="badge">TOP STORED STRATEGY MATCHES</span><div id="matches"></div><h2 id="strategyName"></h2><div id="meta" class="meta"></div><h3>Base Analysis</h3><div id="read"></div><h3>Why this strategy</h3><div id="why"></div><h3>Army</h3><div id="army" class="grid"></div><h3>Spells</h3><div id="spells" class="grid"></div><h3>Heroes + Equipment</h3><div id="heroes" class="grid"></div><h3>Siege + CC</h3><div id="siege"></div><h3>Attack Map</h3><div class="meta">① ENTRY → ② FUNNEL LEFT → ③ FUNNEL RIGHT → ④ MAIN ARMY → ⑤ CORE → ⑥ TARGET</div><h3>Deployment</h3><div id="steps"></div><h3>Timing</h3><div id="timing"></div><h3>Backup</h3><div id="backup"></div><div id="warnings"></div></div>
-<div class="legal">Unofficial fan project. Not endorsed by Supercell. Strategy names are independently structured from current public strategy research; videos/thumbnails/scripts are not embedded.</div></div>
+const MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
+
+/*
+  CoC Battle AI V3
+  - TH-aware troop/spell allowlists
+  - Hero availability + attack-slot validation
+  - Vision strategy with automatic retry
+  - Better numbered visual attack map
+  - Base Design mode with only verified stored links
+  - Optional real icon URLs via ICON_URLS (no unstable hotlinks)
+*/
+
+const TROOPS = [
+  "Barbarian","Archer","Giant","Goblin","Wall Breaker","Balloon","Wizard","Healer",
+  "Dragon","P.E.K.K.A","Baby Dragon","Miner","Electro Dragon","Yeti","Dragon Rider",
+  "Electro Titan","Root Rider","Thrower","Meteor Golem","Minion","Hog Rider","Valkyrie",
+  "Golem","Witch","Lava Hound","Bowler","Ice Golem","Headhunter","Apprentice Warden","Druid"
+];
+
+const TROOP_MIN_TH = {
+  "Barbarian":1,"Archer":2,"Giant":3,"Goblin":3,"Wall Breaker":3,"Balloon":4,"Wizard":5,
+  "Healer":6,"Dragon":7,"P.E.K.K.A":8,"Minion":7,"Hog Rider":7,"Valkyrie":8,"Golem":8,
+  "Witch":9,"Lava Hound":9,"Baby Dragon":9,"Bowler":10,"Miner":10,"Ice Golem":11,
+  "Electro Dragon":11,"Yeti":12,"Headhunter":12,"Dragon Rider":13,"Apprentice Warden":13,
+  "Electro Titan":14,"Druid":14,"Root Rider":15,"Thrower":17,"Meteor Golem":17
+};
+
+const SPELLS = [
+  "Lightning Spell","Healing Spell","Rage Spell","Jump Spell","Freeze Spell","Clone Spell",
+  "Invisibility Spell","Recall Spell","Poison Spell","Earthquake Spell","Haste Spell",
+  "Skeleton Spell","Bat Spell","Overgrowth Spell","Revive Spell"
+];
+
+const SPELL_MIN_TH = {
+  "Lightning Spell":5,"Healing Spell":6,"Rage Spell":7,"Poison Spell":8,"Earthquake Spell":8,
+  "Jump Spell":9,"Freeze Spell":9,"Haste Spell":9,"Skeleton Spell":9,"Clone Spell":10,
+  "Bat Spell":10,"Invisibility Spell":11,"Overgrowth Spell":12,"Recall Spell":13,"Revive Spell":15
+};
+
+const HERO_MIN_TH = {
+  "Barbarian King":4,
+  "Archer Queen":8,
+  "Minion Prince":9,
+  "Grand Warden":11,
+  "Royal Champion":13,
+  "Dragon Duke":15
+};
+
+const HEROES = Object.keys(HERO_MIN_TH);
+
+const SIEGES = [
+  "None","Wall Wrecker","Battle Blimp","Stone Slammer","Siege Barracks",
+  "Log Launcher","Flame Flinger","Battle Drill"
+];
+
+/*
+  Add official/permitted image asset URLs here when you have them.
+  Leaving a URL blank intentionally falls back to a clean text badge.
+  This avoids broken/random hotlinks.
+*/
+const ICON_URLS = {
+  troops: {},
+  spells: {},
+  heroes: {}
+};
+
+/*
+  Only VERIFIED layout links belong here.
+  These TH12 examples are from an official Supercell esports post.
+  Do not invent links for other TH levels.
+*/
+const VERIFIED_BASES = {
+  TH12: [
+    {
+      name: "MCES Eryam War Base",
+      type: "War Base",
+      source: "Official Supercell esports archive",
+      link: "https://link.clashofclans.com/fr?action=OpenLayout&id=TH12%3AWB%3AAAAAHgAAAAFy_S4-CzVCnBGBJfbJGxmp"
+    },
+    {
+      name: "MCES Hugo Stigliz War Base",
+      type: "War Base",
+      source: "Official Supercell esports archive",
+      link: "https://link.clashofclans.com/fr?action=OpenLayout&id=TH12%3AWB%3AAAAAHgAAAAFy0S-1mvTrB4LeFK4DCbE-"
+    },
+    {
+      name: "MCES Lenaide War Base",
+      type: "War Base",
+      source: "Official Supercell esports archive",
+      link: "https://link.clashofclans.com/fr?action=OpenLayout&id=TH12%3AWB%3AAAAAIwAAAAFsY9C7itjwWwblQ3twEr3F"
+    }
+  ]
+};
+
+function thNumber(v) {
+  const n = Number(String(v || "").replace(/\D/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function allowedTroops(th) {
+  const n = thNumber(th);
+  return TROOPS.filter(x => (TROOP_MIN_TH[x] || 99) <= n);
+}
+
+function allowedSpells(th) {
+  const n = thNumber(th);
+  return SPELLS.filter(x => (SPELL_MIN_TH[x] || 99) <= n);
+}
+
+function availableHeroes(th) {
+  const n = thNumber(th);
+  return HEROES.filter(x => HERO_MIN_TH[x] <= n);
+}
+
+function heroSlotCount(th) {
+  // Conservative progression for this guide UI; never exceeds the game's current max of 4.
+  const count = availableHeroes(th).length;
+  return Math.min(4, count);
+}
+
+function pointSchema(label) {
+  return {
+    type:"object",
+    properties:{
+      x:{type:"number",minimum:0,maximum:100},
+      y:{type:"number",minimum:0,maximum:100},
+      label:{type:"string",enum:[label]}
+    },
+    required:["x","y","label"]
+  };
+}
+
+function schemaFor(th) {
+  const troops = allowedTroops(th);
+  const spells = allowedSpells(th);
+  const heroes = availableHeroes(th);
+
+  return {
+    type:"object",
+    properties:{
+      title:{type:"string"},
+      baseRead:{type:"string"},
+      strategyReason:{type:"string"},
+      confidence:{type:"string",enum:["high","medium","low"]},
+      army:{
+        type:"array",minItems:1,
+        items:{
+          type:"object",
+          properties:{
+            name:{type:"string",enum:troops},
+            qty:{type:"integer",minimum:1,maximum:120},
+            role:{type:"string"}
+          },
+          required:["name","qty","role"]
+        }
+      },
+      spells:{
+        type:"array",
+        items:{
+          type:"object",
+          properties:{
+            name:{type:"string",enum:spells.length ? spells : ["Lightning Spell"]},
+            qty:{type:"integer",minimum:1,maximum:20},
+            role:{type:"string"}
+          },
+          required:["name","qty","role"]
+        }
+      },
+      heroes:{
+        type:"array",
+        items:{
+          type:"object",
+          properties:{
+            name:{type:"string",enum:heroes.length ? heroes : ["Barbarian King"]},
+            role:{type:"string"},
+            ability:{type:"string"}
+          },
+          required:["name","role","ability"]
+        }
+      },
+      siege:{
+        type:"object",
+        properties:{
+          name:{type:"string",enum:SIEGES},
+          clanCastle:{type:"string"}
+        },
+        required:["name","clanCastle"]
+      },
+      map:{
+        type:"object",
+        properties:{
+          entry:pointSchema("1 ENTRY"),
+          funnelA:pointSchema("2 FUNNEL A"),
+          funnelB:pointSchema("3 FUNNEL B"),
+          main:pointSchema("4 MAIN"),
+          core:pointSchema("5 CORE"),
+          target:pointSchema("6 TARGET"),
+          spellZones:{
+            type:"array",
+            items:{
+              type:"object",
+              properties:{
+                x:{type:"number",minimum:0,maximum:100},
+                y:{type:"number",minimum:0,maximum:100},
+                label:{type:"string"}
+              },
+              required:["x","y","label"]
+            }
+          }
+        },
+        required:["entry","funnelA","funnelB","main","core","target","spellZones"]
+      },
+      deployment:{
+        type:"array",minItems:1,
+        items:{
+          type:"object",
+          properties:{step:{type:"integer"},text:{type:"string"}},
+          required:["step","text"]
+        }
+      },
+      timing:{type:"array",items:{type:"string"}},
+      backup:{type:"array",items:{type:"string"}},
+      practice:{type:"array",items:{type:"string"}},
+      warnings:{type:"array",items:{type:"string"}}
+    },
+    required:[
+      "title","baseRead","strategyReason","confidence","army","spells","heroes","siege",
+      "map","deployment","timing","backup","practice","warnings"
+    ]
+  };
+}
+
+function json(data,status=200) {
+  return new Response(JSON.stringify(data),{
+    status,
+    headers:{"content-type":"application/json; charset=UTF-8"}
+  });
+}
+
+function imageBytes(dataUrl) {
+  if (!dataUrl || typeof dataUrl !== "string") return null;
+  const comma = dataUrl.indexOf(",");
+  if (comma < 0) return null;
+  const binary = atob(dataUrl.slice(comma+1));
+  const bytes = new Uint8Array(binary.length);
+  for (let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+  return [...bytes];
+}
+
+function extractPlan(result) {
+  if (!result) return null;
+  let v = result.response ?? result.result ?? result;
+  if (v && typeof v === "object") return v;
+  if (typeof v !== "string") return null;
+  let s=v.trim().replace(/^```json\s*/i,"").replace(/^```\s*/,"").replace(/\s*```$/,"").trim();
+  try { return JSON.parse(s); } catch {}
+  const a=s.indexOf("{"), b=s.lastIndexOf("}");
+  if (a>=0 && b>a) { try { return JSON.parse(s.slice(a,b+1)); } catch {} }
+  return null;
+}
+
+function validatePlan(plan,th) {
+  if (!plan || typeof plan!=="object") return {ok:false,error:"JSON plan missing"};
+  const troops=allowedTroops(th), spells=allowedSpells(th), heroes=availableHeroes(th);
+  if (!Array.isArray(plan.army) || !plan.army.length) return {ok:false,error:"Army empty"};
+  for (const u of plan.army) {
+    if (!troops.includes(u?.name)) return {ok:false,error:"Invalid troop "+String(u?.name||"")};
+    if (!Number.isInteger(u.qty)||u.qty<1) return {ok:false,error:"Invalid troop quantity"};
+  }
+  for (const s of plan.spells||[]) {
+    if (!spells.includes(s?.name)) return {ok:false,error:"Invalid spell "+String(s?.name||"")};
+  }
+  const heroNames=(plan.heroes||[]).map(h=>h?.name).filter(Boolean);
+  for (const h of heroNames) if (!heroes.includes(h)) return {ok:false,error:"Unavailable hero "+h};
+  const expected=heroSlotCount(th);
+  if (heroes.length && heroNames.length < expected) {
+    return {ok:false,error:`Hero plan incomplete: expected ${expected} attacking hero slot(s), got ${heroNames.length}`};
+  }
+  if (new Set(heroNames).size !== heroNames.length) return {ok:false,error:"Duplicate hero"};
+  if (!plan.map?.entry || !plan.map?.funnelA || !plan.map?.funnelB || !plan.map?.main || !plan.map?.core || !plan.map?.target)
+    return {ok:false,error:"Visual map incomplete"};
+  if (!Array.isArray(plan.deployment)||!plan.deployment.length) return {ok:false,error:"Deployment empty"};
+  return {ok:true};
+}
+
+async function generatePlan(env,body,correction="") {
+  const th=String(body.th||"").trim();
+  const mode=String(body.mode||"war").trim();
+  const troops=allowedTroops(th);
+  const spells=allowedSpells(th);
+  const heroes=availableHeroes(th);
+  const slots=heroSlotCount(th);
+
+  const prompt=`
+You are CoC Battle AI, a careful Clash of Clans guide.
+
+Town Hall: ${th}
+Mode: ${mode}
+Player notes: ${String(body.message||"None")}
+
+Allowed troops: ${troops.join(", ")}
+Allowed spells: ${spells.join(", ") || "none"}
+Available heroes: ${heroes.join(", ") || "none"}
+Attacking hero slots to fill: ${slots}
+
+STRICT RULES:
+- Army must never be empty.
+- Use only exact allowed troop and spell names.
+- Do not invent or merge names.
+- If hero slots = ${slots}, return exactly ${slots} distinct available heroes when ${slots}>0.
+- Give a complete practical composition, not just key units.
+- Inspect the actual screenshot when supplied.
+- Never pretend an unclear building is certain.
+- Coordinates are 0-100 over the screenshot.
+- Entry and funnel points must be near the actual outside edge where deployment is possible.
+- Funnel A and Funnel B should be on opposite sides of the intended entry lane.
+- MAIN is the main deployment edge/line, not a random point in the core.
+- CORE must be inside the base.
+- TARGET should be the Town Hall or highest-value visible objective.
+- Spell zones must sit on meaningful parts of the intended troop path.
+- Deployment text must correspond to the numbered map:
+  1 ENTRY, 2 FUNNEL A, 3 FUNNEL B, 4 MAIN, 5 CORE, 6 TARGET.
+- Do not guarantee 3 stars.
+${correction ? `Previous result failed validation: ${correction}. Return a corrected result.` : ""}
+`;
+
+  const input={
+    messages:[
+      {role:"system",content:"Return a precise non-empty Clash of Clans strategy matching the JSON schema. Never invent unit names."},
+      {role:"user",content:prompt}
+    ],
+    guided_json:schemaFor(th),
+    max_tokens:3500,
+    temperature:0.1
+  };
+
+  if (body.image) {
+    const bytes=imageBytes(body.image);
+    if (!bytes?.length) throw new Error("Screenshot data invalid");
+    input.image=bytes;
+  }
+
+  return extractPlan(await env.AI.run(MODEL,input));
+}
+
+export default {
+  async fetch(request,env) {
+    const url=new URL(request.url);
+
+    if (request.method==="GET" && url.pathname==="/api/base-designs") {
+      const th=url.searchParams.get("th")||"";
+      return json({
+        th,
+        designs:VERIFIED_BASES[th]||[],
+        note:(VERIFIED_BASES[th]||[]).length
+          ? "Only stored verified links are shown."
+          : "Is Town Hall ke liye abhi koi verified Copy Base link stored nahi hai."
+      });
+    }
+
+    if (request.method==="POST" && url.pathname==="/api/ask") {
+      try {
+        if (!env.AI) return json({error:"Workers AI binding 'AI' missing hai."},500);
+        const body=await request.json();
+        const th=String(body.th||"").trim();
+        if (!thNumber(th)) return json({error:"Town Hall select karo."},400);
+        if (String(body.mode||"war")==="war" && !body.image)
+          return json({error:"War Screenshot mode me screenshot upload karo."},400);
+
+        let plan=await generatePlan(env,body);
+        let check=validatePlan(plan,th);
+        if (!check.ok) {
+          plan=await generatePlan(env,body,check.error);
+          check=validatePlan(plan,th);
+        }
+        if (!check.ok) return json({error:"AI validation failed: "+check.error},422);
+
+        return json({
+          ok:true,
+          plan,
+          heroInfo:{
+            available:availableHeroes(th),
+            slots:heroSlotCount(th)
+          },
+          iconUrls:ICON_URLS
+        });
+      } catch(e) {
+        return json({error:e?.message||"Strategy generate nahi ho payi."},500);
+      }
+    }
+
+    return new Response(PAGE,{headers:{"content-type":"text/html; charset=UTF-8"}});
+  }
+};
+
+const PAGE = `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CoC Battle AI V3</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#070b12;color:#f5f7fb;font-family:Arial,sans-serif}
+.app{max-width:850px;margin:auto;padding:14px}.card{background:#111827;border:1px solid #28364e;border-radius:18px;padding:15px;margin-bottom:12px}
+.hero{background:linear-gradient(135deg,#192640,#0c1423)}.badge{display:inline-block;background:#ffd12f;color:#111;padding:6px 10px;border-radius:20px;font-size:11px;font-weight:900}
+h1{margin:9px 0 5px}h2{margin-top:0}.sub{color:#9eabc0;font-size:13px}.title{display:block;font-weight:800;margin-bottom:8px}
+select,textarea,button{width:100%;border:1px solid #34435e;background:#151f31;color:white;border-radius:12px;padding:12px;font-size:14px}
+textarea{min-height:90px}.modes{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mode.active,.go,.copy{background:#ffd12f;color:#111;font-weight:900;border:0}
+.upload{display:block;text-align:center;border:2px dashed #40516f;border-radius:14px;padding:18px;cursor:pointer}#file{display:none}
+#previewBox{display:none;position:relative;margin-top:12px;overflow:hidden;border-radius:14px}#preview{width:100%;display:block}#attackMap{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.go{margin-top:10px}.go:disabled{opacity:.55}.status{margin-top:10px;color:#b2bfd1;font-size:13px}#result,#designs{display:none}
+.section{margin-top:20px}.section h3{color:#ffd12f;margin:0 0 10px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.unit,.design{background:#0a1220;border:1px solid #293850;border-radius:13px;padding:10px}.unit{text-align:center}
+.icon{width:54px;height:54px;margin:0 auto 7px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:#202b3d;overflow:hidden;font-size:12px;font-weight:800}
+.icon img{width:100%;height:100%;object-fit:cover}.name{font-weight:800}.qty{color:#ffd12f;font-size:18px;font-weight:900;margin-top:3px}.role{color:#a8b5c7;font-size:11px;margin-top:5px;line-height:1.35}
+.step{background:#0a1220;border-left:3px solid #ffd12f;padding:10px;margin:7px 0;border-radius:8px;line-height:1.45}
+.road{background:#071523;border:1px solid #21465c;color:#70e8ff;border-radius:11px;padding:12px;font-weight:800}.warning{color:#ffbd75}
+.copy{display:block;text-decoration:none;text-align:center;border-radius:10px;padding:10px;margin-top:10px}.legal{font-size:11px;color:#7f8da3;line-height:1.4;margin:18px 2px}
+@media(max-width:520px){.grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="card hero"><div class="badge">V3 • VALIDATED STRATEGY</div><h1>⚔️ CoC Battle AI</h1><div class="sub">Vision • Heroes • Funnel Map • Verified Base Links</div></div>
+
+<div class="card"><label class="title">1️⃣ Town Hall</label><select id="th"><option value="">Town Hall select karo</option>${Array.from({length:18},(_,i)=>`<option>TH${i+1}</option>`).join("")}</select></div>
+
+<div class="card"><label class="title">2️⃣ Mode</label><div class="modes">
+<button class="mode" data-mode="attack">⚔️ Attack</button><button class="mode" data-mode="farming">💰 Farming</button>
+<button class="mode active" data-mode="war">🏆 War Screenshot</button><button class="mode" data-mode="base">🏰 Base Design</button>
+</div></div>
+
+<div id="battleInputs">
+<div class="card"><label class="title">3️⃣ Base Screenshot</label><label class="upload" for="file">📷 Upload Screenshot<br><span class="sub">PNG / JPG / WebP • Max 20MB • Auto Compress</span></label>
+<input id="file" type="file" accept="image/png,image/jpeg,image/webp"><div id="previewBox"><img id="preview"><canvas id="attackMap"></canvas></div></div>
+<div class="card"><label class="title">4️⃣ Extra Details</label><textarea id="message" placeholder="Hero levels, equipment, troop levels..."></textarea>
+<button id="go" class="go">⚔️ Analyze + Build Strategy</button><div id="status" class="status"></div></div>
+</div>
+
+<div id="designs" class="card"><h2>🏰 Verified Base Designs</h2><div id="designList"></div><div id="designNote" class="sub"></div></div>
+
+<div id="result" class="card"><h2 id="planTitle"></h2><div id="confidence" class="sub"></div>
+<div class="section"><h3>🔍 Base Analysis</h3><div id="baseRead"></div></div>
+<div class="section"><h3>🧠 Strategy</h3><div id="reason"></div></div>
+<div class="section"><h3>🪖 Complete Army</h3><div id="army" class="grid"></div></div>
+<div class="section"><h3>🧪 Spells</h3><div id="spells" class="grid"></div></div>
+<div class="section"><h3>👑 Attacking Heroes</h3><div id="heroSummary" class="sub"></div><div id="heroes" class="grid"></div></div>
+<div class="section"><h3>🚜 Siege + Clan Castle</h3><div id="siege"></div></div>
+<div class="section"><h3>🗺️ Numbered Roadmap</h3><div class="road">1 ENTRY → 2/3 FUNNEL → 4 MAIN → 5 CORE → 6 TARGET</div></div>
+<div class="section"><h3>🚀 Deployment</h3><div id="deployment"></div></div>
+<div class="section"><h3>⏱️ Timing</h3><div id="timing"></div></div>
+<div class="section"><h3>🔁 Backup</h3><div id="backup"></div></div>
+<div class="section"><h3>🎯 Practice</h3><div id="practice"></div></div>
+<div id="warnings" class="section warning"></div></div>
+
+<div class="legal">This material is unofficial and is not endorsed by Supercell. Clash of Clans and related assets belong to Supercell. Fan-content use should follow Supercell's Fan Content Policy.</div>
+</div>
+
 <script>
-const $=x=>document.getElementById(x),th=$("th"),file=$("file"),preview=$("preview"),pbox=$("previewBox"),canvas=$("map"),status=$("status");let img=null,last=null,mode="war";
-document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");mode=b.dataset.m;if(mode==="base"){$("battle").style.display="none";$("result").style.display="none";loadBases()}else{$("battle").style.display="block";$("bases").style.display="none"}});
-th.onchange=()=>{loadLibrary();if(mode==="base")loadBases()};
-async function loadLibrary(){if(!th.value)return;$("library").innerHTML="Loading...";let d=await(await fetch("/api/strategies?th="+th.value)).json();$("library").innerHTML=d.strategies.map(x=>"<span>"+esc(x.name)+" • "+esc(x.style)+"</span>").join("")}
-async function loadBases(){if(!th.value){alert("TH select karo");return}$("bases").style.display="block";$("baseList").innerHTML="Loading war bases...";try{let r=await fetch("/api/base-designs?th="+th.value),d=await r.json();if(!r.ok)throw Error(d.error);$("baseList").innerHTML='<div class="basegrid">'+d.bases.map(x=>'<div class="base"><img loading="lazy" src="'+attr(x.image)+'"><div class="basebody"><b>'+esc(x.name||("TH"+x.town_hall+" War Base"))+'</b><a class="copy" href="'+attr(x.link)+'">📋 Copy Base</a></div></div>').join("")+'</div>'}catch(e){$("baseList").textContent=e.message}}
-file.onchange=async()=>{let f=file.files[0];if(!f)return;if(f.size>20*1024*1024){alert("20MB max");return}img=await compress(f);preview.onload=()=>{pbox.style.display="block";if(last)draw(last)};preview.src=img;status.textContent="✅ Screenshot ready"};
-function compress(f){return new Promise((res,rej)=>{let r=new FileReader();r.onload=e=>{let im=new Image();im.onload=()=>{let w=im.width,h=im.height,M=1600,s=Math.min(1,M/w,M/h);let c=document.createElement("canvas");c.width=Math.round(w*s);c.height=Math.round(h*s);c.getContext("2d").drawImage(im,0,0,c.width,c.height);res(c.toDataURL("image/jpeg",.88))};im.src=e.target.result};r.readAsDataURL(f)})}
-$("go").onclick=async()=>{if(!th.value||!img){alert("TH aur screenshot dono chahiye");return}status.textContent="🔍 Base analyze + stored strategy match...";try{let r=await fetch("/api/ask",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({th:th.value,image:img,notes:$("notes").value})}),d=await r.json();if(!r.ok)throw Error(d.error);render(d)}catch(e){status.textContent="❌ "+e.message}};
-function render(d){let p=d.plan;$("matches").innerHTML=(d.matches||[d.strategy]).map((m,i)=>'<div class="match '+(i===0?"best":"")+'"><div class="rank">'+(i===0?"🏆 BEST MATCH":"#"+(i+1)+" ALTERNATIVE")+'</div><b>'+esc(m.name)+'</b><div class="role">'+esc(m.style)+'</div></div>').join("");$("strategyName").textContent=d.strategy.name;$("meta").textContent="🔒 Stored strategy • "+d.strategy.style+" • Base-fit: "+p.confidence;$("read").textContent=p.baseRead;$("why").textContent=p.why;$("army").innerHTML=p.army.map(x=>card(x.name,"×"+x.qty,x.role)).join("");$("spells").innerHTML=p.spells.map(x=>card(x.name,"×"+x.qty,x.role)).join("");$("heroes").innerHTML=p.heroes.map(x=>card(x.name,"",x.equipment+" • "+x.role)).join("");$("siege").textContent=p.siege.name+" | CC: "+p.siege.cc;$("steps").innerHTML=p.steps.map(x=>'<div class="step">'+esc(x)+'</div>').join("");$("timing").innerHTML=p.timing.map(x=>'<div class="step">'+esc(x)+'</div>').join("");$("backup").innerHTML=p.backup.map(x=>'<div class="step">'+esc(x)+'</div>').join("");$("warnings").innerHTML=p.warnings.map(x=>'<div class="step">⚠️ '+esc(x)+'</div>').join("");last=p.map;$("result").style.display="block";requestAnimationFrame(()=>draw(last));$("result").scrollIntoView({behavior:"smooth"})}
-function card(n,q,r){return '<div class="unit"><img src="/api/icon?name='+encodeURIComponent(n)+'" onerror="this.style.display=\'none\'"><b>'+esc(n)+'</b><div class="qty">'+esc(q)+'</div><div class="role">'+esc(r)+'</div></div>'}
-function draw(m){let w=preview.clientWidth,h=preview.clientHeight,d=devicePixelRatio||1;canvas.width=w*d;canvas.height=h*d;let c=canvas.getContext("2d");c.setTransform(d,0,0,d,0,0);c.clearRect(0,0,w,h);[[m.entry,"#00ff8c"],[m.funnelL,"#ffd12f"],[m.funnelR,"#ffd12f"],[m.main,"#00e5ff"],[m.core,"#ff9f43"],[m.target,"#ff4f70"]].forEach(x=>zone(c,x[0],w,h,x[1]));(m.spells||[]).forEach(x=>zone(c,x,w,h,"#c879ff"))}
-function zone(c,p,w,h,col){if(!p)return;let x=p.x/100*w,y=p.y/100*h,bw=p.width/100*w,bh=p.height/100*h;c.fillStyle=hex(col,.18);c.strokeStyle=col;c.lineWidth=3;c.fillRect(x,y,bw,bh);c.strokeRect(x,y,bw,bh);c.font="bold 11px Arial";c.fillStyle="#000";c.fillRect(x,Math.max(0,y-20),Math.min(150,bw+30),20);c.fillStyle="#fff";c.fillText(p.label,x+4,Math.max(13,y-6))}
-function hex(h,a){let n=parseInt(h.slice(1),16);return"rgba("+((n>>16)&255)+","+((n>>8)&255)+","+(n&255)+","+a+")"}function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}function attr(v){return esc(v)}addEventListener("resize",()=>{if(last)draw(last)});
-</script></body></html>`;
+const $=id=>document.getElementById(id);
+const th=$("th"),file=$("file"),preview=$("preview"),previewBox=$("previewBox"),mapCanvas=$("attackMap"),message=$("message"),go=$("go"),status=$("status"),result=$("result"),designs=$("designs");
+let mode="war",selectedImage=null,lastMap=null,icons={troops:{},spells:{},heroes:{}};
+
+document.querySelectorAll(".mode").forEach(b=>b.onclick=async()=>{
+ document.querySelectorAll(".mode").forEach(x=>x.classList.remove("active"));b.classList.add("active");mode=b.dataset.mode;
+ if(mode==="base"){ $("battleInputs").style.display="none";result.style.display="none";await loadDesigns(); }
+ else{$("battleInputs").style.display="block";designs.style.display="none";}
+});
+th.onchange=()=>{if(mode==="base")loadDesigns()};
+
+async function loadDesigns(){
+ if(!th.value){alert("Town Hall select karo.");return}
+ designs.style.display="block";$("designList").innerHTML="Loading...";
+ const r=await fetch("/api/base-designs?th="+encodeURIComponent(th.value)),d=await r.json();
+ $("designList").innerHTML=(d.designs||[]).map(x=>'<div class="design"><b>'+esc(x.name)+'</b><div class="sub">'+esc(x.type)+' • '+esc(x.source)+'</div><a class="copy" href="'+escAttr(x.link)+'">Open / Copy Base</a></div>').join("") || '<div class="design">Is TH ke liye verified layout abhi stored nahi hai.</div>';
+ $("designNote").textContent=d.note||"";
+}
+
+file.onchange=async()=>{
+ const f=file.files[0];if(!f)return;if(f.size>20*1024*1024){alert("Maximum 20MB");return}
+ status.textContent="🖼️ Optimizing...";
+ selectedImage=await compress(f);preview.onload=()=>{previewBox.style.display="block";if(lastMap)drawMap(lastMap)};preview.src=selectedImage;status.textContent="✅ Screenshot ready";
+};
+
+function compress(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>{const im=new Image();im.onload=()=>{let w=im.width,h=im.height,M=1600;if(w>M||h>M){const s=Math.min(M/w,M/h);w=Math.round(w*s);h=Math.round(h*s)}const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(im,0,0,w,h);res(c.toDataURL("image/jpeg",.88))};im.onerror=rej;im.src=e.target.result};r.onerror=rej;r.readAsDataURL(f)})}
+
+go.onclick=async()=>{
+ if(!th.value){alert("Town Hall select karo.");return}if(mode==="war"&&!selectedImage){alert("Screenshot upload karo.");return}
+ go.disabled=true;result.style.display="none";status.textContent="🔍 Analyzing...";
+ try{
+  const r=await fetch("/api/ask",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({th:th.value,mode,message:message.value,image:selectedImage})});
+  const d=await r.json();if(!r.ok)throw new Error(d.error||"Request failed");icons=d.iconUrls||icons;render(d.plan,d.heroInfo);status.textContent="✅ Strategy ready";
+ }catch(e){status.textContent="❌ "+e.message}finally{go.disabled=false}
+};
+
+function icon(kind,name){const url=icons?.[kind]?.[name];return url?'<img src="'+escAttr(url)+'" alt="'+escAttr(name)+'">':esc(name.split(" ").map(x=>x[0]).join("").slice(0,3))}
+function card(kind,name,qty,role){return '<div class="unit"><div class="icon">'+icon(kind,name)+'</div><div class="name">'+esc(name)+'</div><div class="qty">'+esc(qty||"")+'</div><div class="role">'+esc(role||"")+'</div></div>'}
+function steps(a){return(a||[]).map(x=>'<div class="step">'+esc(x)+'</div>').join("")}
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function escAttr(v){return esc(v)}
+
+function render(p,hi){
+ $("planTitle").textContent=p.title||"Attack Plan";$("confidence").textContent="Confidence: "+(p.confidence||"unknown");$("baseRead").textContent=p.baseRead||"";$("reason").textContent=p.strategyReason||"";
+ $("army").innerHTML=(p.army||[]).map(x=>card("troops",x.name,"×"+x.qty,x.role)).join("");
+ $("spells").innerHTML=(p.spells||[]).map(x=>card("spells",x.name,"×"+x.qty,x.role)).join("");
+ $("heroes").innerHTML=(p.heroes||[]).map(x=>card("heroes",x.name,"",x.role+" • "+x.ability)).join("");
+ $("heroSummary").textContent="Available: "+(hi?.available||[]).join(", ")+" | Attack slots: "+(hi?.slots??0);
+ $("siege").textContent=(p.siege?.name||"None")+" | CC: "+(p.siege?.clanCastle||"Not specified");
+ $("deployment").innerHTML=(p.deployment||[]).map(x=>'<div class="step"><b>'+esc(x.step)+'.</b> '+esc(x.text)+'</div>').join("");
+ $("timing").innerHTML=steps(p.timing);$("backup").innerHTML=steps(p.backup);$("practice").innerHTML=steps(p.practice);$("warnings").innerHTML=(p.warnings||[]).map(x=>"⚠️ "+esc(x)).join("<br><br>");
+ lastMap=p.map;result.style.display="block";requestAnimationFrame(()=>drawMap(lastMap));result.scrollIntoView({behavior:"smooth"});
+}
+
+function pos(p,w,h){return{x:Number(p.x)/100*w,y:Number(p.y)/100*h}}
+function drawMap(m){
+ if(!m||!selectedImage)return;const w=preview.clientWidth,h=preview.clientHeight;if(!w||!h)return;const d=devicePixelRatio||1;mapCanvas.width=Math.round(w*d);mapCanvas.height=Math.round(h*d);mapCanvas.style.width=w+"px";mapCanvas.style.height=h+"px";
+ const c=mapCanvas.getContext("2d");c.setTransform(d,0,0,d,0,0);c.clearRect(0,0,w,h);
+ arrow(c,m.entry,m.main,w,h,"#00ff8c");arrow(c,m.funnelA,m.main,w,h,"#ffd12f");arrow(c,m.funnelB,m.main,w,h,"#ffd12f");arrow(c,m.main,m.core,w,h,"#00e5ff");arrow(c,m.core,m.target,w,h,"#ff4f70");
+ [[m.entry,"#00ff8c"],[m.funnelA,"#ffd12f"],[m.funnelB,"#ffd12f"],[m.main,"#00e5ff"],[m.core,"#ff9f43"],[m.target,"#ff4f70"]].forEach(x=>marker(c,x[0],w,h,x[1]));
+ (m.spellZones||[]).forEach(x=>marker(c,x,w,h,"#c879ff"));
+}
+function arrow(c,a,b,w,h,col){if(!a||!b)return;const A=pos(a,w,h),B=pos(b,w,h);c.strokeStyle=col;c.fillStyle=col;c.lineWidth=5;c.lineCap="round";c.beginPath();c.moveTo(A.x,A.y);c.lineTo(B.x,B.y);c.stroke();const q=Math.atan2(B.y-A.y,B.x-A.x),s=15;c.beginPath();c.moveTo(B.x,B.y);c.lineTo(B.x-s*Math.cos(q-Math.PI/6),B.y-s*Math.sin(q-Math.PI/6));c.lineTo(B.x-s*Math.cos(q+Math.PI/6),B.y-s*Math.sin(q+Math.PI/6));c.closePath();c.fill()}
+function marker(c,p,w,h,col){if(!p)return;const P=pos(p,w,h),lab=String(p.label||"");c.fillStyle=col;c.beginPath();c.arc(P.x,P.y,10,0,Math.PI*2);c.fill();c.font="bold 12px Arial";const tw=c.measureText(lab).width;let x=P.x+12,y=P.y-13;if(x+tw+12>w)x=P.x-tw-24;if(y<2)y=P.y+12;c.fillStyle="rgba(0,0,0,.88)";c.fillRect(x,y,tw+10,22);c.fillStyle="#fff";c.fillText(lab,x+5,y+15)}
+addEventListener("resize",()=>{if(lastMap&&selectedImage)drawMap(lastMap)});
+</script>
+</body>
+</html>`;
